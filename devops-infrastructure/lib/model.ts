@@ -12,10 +12,27 @@ export const COMMON_REPO = 'cdk-pipelines-tutorial-common-repo';
 export const SOURCE_CODE_BUCKET_NAME = 'cdk-pipelines-tutorial-sources-bucket';
 export const ARTIFACT_BUCKET_NAME = 'cdk-pipelines-tutorial-artifact-bucket';
 export const ARTIFACT_BUCKET_KEY_NAME = 'cdk-pipelines-tutorial-artifact-key';
+export const OUTER_PIPELINE_NAME = 'Outer_Pipeline';
+
+export const SOURCE_CODE_KEY = 'deployments/pipeline-input.zip';
 
 export enum StackExports {
     PIPELINE_SOURCE_BUCKET_ARN_REF = 'uniform-pipeline-source-bucket-arn-ref',
     PIPELINE_ARTIFACT_BUCKET_KEY_ARN_REF = 'uniform-pipeline-artifact-bucket-key-arn-ref',
     PIPELINE_ARTIFACT_BUCKET_ARN_REF = 'uniform-pipeline-artifact-bucket-arn-ref',
 };
-  
+
+export const makeVersionedPipelineName = (containedStackName: string, containedStackVersion: string) => {
+    return `${containedStackName}-${containedStackVersion.replace(/\./g, '-')}-pipeline`; 
+}
+
+export const makeVersionedPipelineStackName = (containedStackName: string, containedStackVersion: string) => {
+    return `${containedStackName}-${containedStackVersion.replace(/\./g, '-')}-pipeline-stack`; 
+}
+
+
+export const STACK_NAME_TAG = 'uniform-pipelines:contained-stack-name';
+export const STACK_VERSION_TAG = 'uniform-pipelines:contained-stack-version';
+export const DEPLOYER_STACK_NAME_TAG = 'uniform-pipelines:deployer-stack-name';
+export const STACK_DEPLOYED_AT_TAG = 'uniform-pipelines:deployed-at';
+

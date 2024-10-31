@@ -1,13 +1,11 @@
 import { Bucket, EventType, IBucket } from "aws-cdk-lib/aws-s3";
 import { Construct } from "constructs";
-import { SOURCE_CODE_BUCKET_NAME, StackExports } from "./model";
+import { OUTER_PIPELINE_NAME, SOURCE_CODE_BUCKET_NAME, StackExports } from "./model";
 import { CfnOutput, Stack } from "aws-cdk-lib";
 import { join } from "path";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
 import { Effect, PolicyStatement } from "aws-cdk-lib/aws-iam";
 import { LambdaDestination } from 'aws-cdk-lib/aws-s3-notifications';
-
-const PIPELINE_NAME = 'Feature1_Pipeline';
 
 export class SourceCodeBucketConstruct extends Construct {
     sourceBucket: IBucket;
@@ -32,14 +30,14 @@ export class SourceCodeBucketConstruct extends Construct {
             entry: join('lambda', 'codepipeline', 'handlers.ts'),  // Path to the Lambda function file
             handler: 'startPipeline',  // The name of the exported handler in the Lambda file
             environment: {
-                PIPELINE_NAME: PIPELINE_NAME,  // Set the name of your pipeline as an environment variable
+                PIPELINE_NAME: OUTER_PIPELINE_NAME,  // Set the name of your pipeline as an environment variable
             },
         });
         const { account, region } = Stack.of(this);
 
         pipelineTriggerLambda.addToRolePolicy(new PolicyStatement({
             actions: ['codepipeline:StartPipelineExecution'],  // Allow Lambda to start pipeline execution
-            resources: [`arn:aws:codepipeline:${region}:${account}:${PIPELINE_NAME}`],  // The ARN of the pipeline
+            resources: [`arn:aws:codepipeline:${region}:${account}:${OUTER_PIPELINE_NAME}`],  // The ARN of the pipeline
             effect: Effect.ALLOW,
         }));
 

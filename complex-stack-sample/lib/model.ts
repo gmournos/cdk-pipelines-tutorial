@@ -12,6 +12,7 @@ export const COMMON_REPO = 'cdk-pipelines-tutorial-common-repo';
 export const SOURCE_CODE_BUCKET_NAME = 'cdk-pipelines-tutorial-sources-bucket';
 export const ARTIFACT_BUCKET_NAME = 'cdk-pipelines-tutorial-artifact-bucket';
 export const ARTIFACT_BUCKET_KEY_NAME = 'cdk-pipelines-tutorial-artifact-key';
+export const OUTER_PIPELINE_NAME = 'Outer_Pipeline';
 
 export const SOURCE_CODE_KEY = 'deployments/pipeline-input.zip';
 
