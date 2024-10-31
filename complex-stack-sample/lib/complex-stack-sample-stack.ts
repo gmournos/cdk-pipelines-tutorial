@@ -11,9 +11,9 @@ export class ComplexStackSampleStack extends cdk.Stack {
         super(scope, id, props);
 
         // 1. Create an S3 Bucket
-        const bucket = new Bucket(this, 'feature1-sample-bucket', {
+        const bucket = new Bucket(this, 'feature2-sample-bucket', {
             versioned: true,
-            bucketName: `cdk-pipelines-feature1-sample-bucket-${this.account}`,
+            bucketName: `cdk-pipelines-feature2-sample-bucket-${this.account}`,
             removalPolicy: cdk.RemovalPolicy.DESTROY,
             autoDeleteObjects: true,
         });
@@ -25,8 +25,8 @@ export class ComplexStackSampleStack extends cdk.Stack {
         });
 
         // 3. Create a Lambda function using NodejsFunction
-        const myLambda = new NodejsFunction(this, 'feature1-sample-function', {
-            functionName: 'cdk-pipelines-feature1-sample-function',
+        const myLambda = new NodejsFunction(this, 'feature2-sample-function', {
+            functionName: 'cdk-pipelines-feature2-sample-function',
             runtime: Runtime.NODEJS_20_X,
             entry: path.join('lambda', 'sample-function.ts'),
             handler: 'writeRandomToS3',

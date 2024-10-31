@@ -1,8 +1,8 @@
 import { Construct } from 'constructs';
-import { StackProps, Stack, Stage, Fn } from 'aws-cdk-lib';
+import { StackProps, Stack, Stage, Fn, Tags } from 'aws-cdk-lib';
 import { CodeBuildStep, CodePipeline, CodePipelineSource, IFileSetProducer } from 'aws-cdk-lib/pipelines';
 import { ComplexStackSampleStack } from './complex-stack-sample-stack';
-import { Accounts, COMMON_REPO, DOMAIN_NAME } from './model';
+import { Accounts, COMMON_REPO, DEPLOYER_STACK_NAME_TAG, DOMAIN_NAME, makeVersionedPipelineName, STACK_DEPLOYED_AT_TAG, STACK_NAME_TAG, STACK_VERSION_TAG } from './model';
 import { Effect, PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import { Bucket } from 'aws-cdk-lib/aws-s3';
 import { StackExports } from './model';
@@ -10,23 +10,25 @@ import { SOURCE_CODE_KEY } from './model';
 import { S3Trigger } from 'aws-cdk-lib/aws-codepipeline-actions';
 import { Key } from 'aws-cdk-lib/aws-kms';
 
-const PIPELINE_NAME = 'Feature1_Pipeline';
-
 class DeploymentStage extends Stage {
+    readonly containedStack: Stack;
     constructor(scope: Construct, targetAccount: string, pipelineStackProps: PipelineStackProps) {
         super(scope, `${pipelineStackProps.containedStackName}-pipeline-deployment-${targetAccount}`, {
             stageName: `deployment-${targetAccount}`,
         });
-        new ComplexStackSampleStack(this, 'artifacts-stack', {
+        this.containedStack = new ComplexStackSampleStack(this, 'artifacts-stack', {
             ...pipelineStackProps.containedStackProps,
             stackName: pipelineStackProps.containedStackName
         });
+        Tags.of(this.containedStack).add(STACK_VERSION_TAG, pipelineStackProps.containedStackVersion);
+        Tags.of(this.containedStack).add(STACK_DEPLOYED_AT_TAG, (new Date()).toISOString());
     }
 }
 
 export interface PipelineStackProps extends StackProps {
     containedStackProps: StackProps;
     containedStackName: string;
+    containedStackVersion: string;
 }
 
 export class PipelineStack extends Stack {
@@ -79,7 +81,7 @@ export class PipelineStack extends Stack {
         // Create a new CodePipeline
         const pipeline = new CodePipeline(this, 'cicd-pipeline', {
             artifactBucket,
-            pipelineName: PIPELINE_NAME,
+            pipelineName: makeVersionedPipelineName(props.containedStackName, props.containedStackVersion),
             // Define the synthesis step
             synth: new CodeBuildStep('synth-step', {
                 input: codeSource,
@@ -108,5 +110,10 @@ export class PipelineStack extends Stack {
         pipeline.buildPipeline();
 
         sourceBucket.grantRead(pipeline.pipeline.role);
+
+        Tags.of(pipeline.pipeline).add(STACK_NAME_TAG, props.containedStackName);
+        Tags.of(pipeline.pipeline).add(STACK_VERSION_TAG, props.containedStackVersion);
+        Tags.of(pipeline.pipeline).add(DEPLOYER_STACK_NAME_TAG, this.stackName);
+
     }
 }

@@ -20,4 +20,18 @@ export enum StackExports {
     PIPELINE_ARTIFACT_BUCKET_KEY_ARN_REF = 'uniform-pipeline-artifact-bucket-key-arn-ref',
     PIPELINE_ARTIFACT_BUCKET_ARN_REF = 'uniform-pipeline-artifact-bucket-arn-ref',
 };
-  
+
+export const makeVersionedPipelineName = (containedStackName: string, containedStackVersion: string) => {
+    return `${containedStackName}-${containedStackVersion.replace(/\./g, '-')}-pipeline`; 
+}
+
+export const makeVersionedPipelineStackName = (containedStackName: string, containedStackVersion: string) => {
+    return `${containedStackName}-${containedStackVersion.replace(/\./g, '-')}-pipeline-stack`; 
+}
+
+
+export const STACK_NAME_TAG = 'uniform-pipelines:contained-stack-name';
+export const STACK_VERSION_TAG = 'uniform-pipelines:contained-stack-version';
+export const DEPLOYER_STACK_NAME_TAG = 'uniform-pipelines:deployer-stack-name';
+export const STACK_DEPLOYED_AT_TAG = 'uniform-pipelines:deployed-at';
+
