@@ -1,9 +1,13 @@
 import { Construct } from 'constructs';
-import { StackProps, Stack, Stage } from 'aws-cdk-lib';
-import { CodeBuildStep, CodePipeline, IFileSetProducer } from 'aws-cdk-lib/pipelines';
+import { StackProps, Stack, Stage, Fn } from 'aws-cdk-lib';
+import { CodeBuildStep, CodePipeline, CodePipelineSource, IFileSetProducer } from 'aws-cdk-lib/pipelines';
 import { ComplexStackSampleStack } from './complex-stack-sample-stack';
 import { Accounts, COMMON_REPO, DOMAIN_NAME } from './model';
 import { Effect, PolicyStatement } from 'aws-cdk-lib/aws-iam';
+import { Bucket } from 'aws-cdk-lib/aws-s3';
+import { StackExports } from './model';
+import { SOURCE_CODE_KEY } from './model';
+import { S3Trigger } from 'aws-cdk-lib/aws-codepipeline-actions';
 
 const PIPELINE_NAME = 'Feature1_Pipeline';
 
@@ -20,7 +24,6 @@ class DeploymentStage extends Stage {
 }
 
 export interface PipelineStackProps extends StackProps {
-    codeSource: IFileSetProducer;
     containedStackProps: StackProps;
     containedStackName: string;
 }
@@ -28,6 +31,13 @@ export interface PipelineStackProps extends StackProps {
 export class PipelineStack extends Stack {
     constructor(scope: Construct, id: string, props: PipelineStackProps) {
         super(scope, id, props);
+
+        const sourceBucket = Bucket.fromBucketAttributes(this, 'pipeline-source-bucket', {
+            bucketArn: Fn.importValue(StackExports.PIPELINE_SOURCE_BUCKET_ARN_REF),
+        });
+        const codeSource = CodePipelineSource.s3(sourceBucket, SOURCE_CODE_KEY, {
+            trigger: S3Trigger.NONE,
+        });
 
         const codeArtifactPermissions = [
             new PolicyStatement({
@@ -63,7 +73,7 @@ export class PipelineStack extends Stack {
             crossAccountKeys: true,
             // Define the synthesis step
             synth: new CodeBuildStep('synth-step', {
-                input: props.codeSource,
+                input: codeSource,
                 installCommands: [
                     'npm install -g aws-cdk',
                     `aws codeartifact login --tool npm --repository ${COMMON_REPO} --domain ${DOMAIN_NAME} --domain-owner ${Accounts.DEVOPS}`,
@@ -82,5 +92,9 @@ export class PipelineStack extends Stack {
 
         // Add a deployment stage to TEST
         pipeline.addStage(new DeploymentStage(this, Accounts.TEST, props));
+
+        pipeline.buildPipeline();
+
+        sourceBucket.grantRead(pipeline.pipeline.role);
     }
 }
