@@ -52,6 +52,13 @@ export class OuterLevelPipelineConstruct extends Construct {
                 }),
                 environment: {
                     buildImage: codebuild.LinuxBuildImage.STANDARD_7_0,
+                    environmentVariables: {
+                        DEVOPS_ACCOUNT: { value : process.env.DEVOPS_ACCOUNT},
+                        DEVELOPMENT_ACCOUNT: { value : process.env.DEVELOPMENT_ACCOUNT },
+                        TEST_ACCOUNT: { value : process.env.TEST_ACCOUNT },
+                        ACCEPTANCE_ACCOUNT: { value : process.env.ACCEPTANCE_ACCOUNT },
+                        PRODUCTION_ACCOUNT: { value : process.env.PRODUCTION_ACCOUNT },
+                    },
                 },
             }),
         });
