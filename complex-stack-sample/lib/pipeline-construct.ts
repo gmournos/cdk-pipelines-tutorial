@@ -1,19 +1,24 @@
 import { Construct } from 'constructs';
 import { StackProps, Stack, Stage, Fn, Tags } from 'aws-cdk-lib';
-import { CodeBuildStep, CodePipeline, CodePipelineSource, IFileSetProducer, ManualApprovalStep } from 'aws-cdk-lib/pipelines';
+import { CodeBuildStep, CodePipeline, CodePipelineSource, ManualApprovalStep } from 'aws-cdk-lib/pipelines';
 import { ComplexStackSampleStack } from './complex-stack-sample-stack';
-import { Accounts, CHANGESET_RENAME_MACRO, COMMON_REPO, DEPLOYER_STACK_NAME_TAG, DOMAIN_NAME, INNER_PIPELINE_INPUT_FOLDER, makeVersionedPipelineName, STACK_DEPLOYED_AT_TAG, STACK_NAME_TAG, STACK_VERSION_TAG } from './model';
+import { Accounts, CHANGESET_RENAME_MACRO, COMMON_REPO, DEPLOYER_STACK_NAME_TAG, DOMAIN_NAME, getReadableAccountName, INNER_PIPELINE_INPUT_FOLDER, makeVersionedPipelineName, STACK_DEPLOYED_AT_TAG, STACK_NAME_TAG, STACK_VERSION_TAG } from './model';
 import { Effect, PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import { Bucket } from 'aws-cdk-lib/aws-s3';
 import { StackExports } from './model';
 import { S3Trigger } from 'aws-cdk-lib/aws-codepipeline-actions';
 import { Key } from 'aws-cdk-lib/aws-kms';
+import { CfnPipeline } from 'aws-cdk-lib/aws-codepipeline';
+
+const makeDeploymentStageName = (accountValue: string) => {
+    return `${getReadableAccountName(accountValue)}-deployment`;
+};
 
 class DeploymentStage extends Stage {
     readonly containedStack: Stack;
     constructor(scope: Construct, targetAccount: string, pipelineStackProps: PipelineStackProps) {
         super(scope, `${pipelineStackProps.containedStackName}-pipeline-deployment-${targetAccount}`, {
-            stageName: `deployment-${targetAccount}`,
+            stageName: makeDeploymentStageName(targetAccount),
         });
         this.containedStack = new ComplexStackSampleStack(this, 'artifacts-stack', {
             ...pipelineStackProps.containedStackProps,
@@ -128,10 +133,21 @@ export class PipelineStack extends Stack {
 
         sourceBucket.grantRead(pipeline.pipeline.role);
         this.addTransform(CHANGESET_RENAME_MACRO); 
+        disableTransitions(pipeline.pipeline.node.defaultChild as CfnPipeline, 
+            [makeDeploymentStageName(Accounts.ACCEPTANCE)], 'Avoid manual approval expiration after one week');
 
         Tags.of(pipeline.pipeline).add(STACK_NAME_TAG, props.containedStackName);
         Tags.of(pipeline.pipeline).add(STACK_VERSION_TAG, props.containedStackVersion);
         Tags.of(pipeline.pipeline).add(DEPLOYER_STACK_NAME_TAG, this.stackName);
-
     }
 }
+
+const disableTransitions = (pipeline: CfnPipeline, stageNames: string[], disableReason: string) => {
+    const disableTransitionsPropertyParams = stageNames.map(stageName => {
+        return {
+            Reason: disableReason,
+            StageName: stageName,
+        };
+    });
+    pipeline.addPropertyOverride("DisableInboundStageTransitions", disableTransitionsPropertyParams);
+};

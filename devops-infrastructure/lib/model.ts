@@ -49,3 +49,13 @@ export enum PipelineRoles {
     OUTER_PIPELINE_DEPLOYMENT_ROLE = 'outer-pipeline-deployment-deployment-role',
 };
 
+export const getReadableAccountName = (accountValue: string) => {
+    const accountKey = Object.keys(Accounts).find(key => Accounts[key as keyof typeof Accounts] === accountValue);
+
+    if (accountKey) {
+        return accountKey.toLowerCase();
+    } else {
+        throw new Error('Account not found');
+    }
+};
+
