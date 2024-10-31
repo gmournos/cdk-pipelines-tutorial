@@ -4,7 +4,7 @@ import * as cpactions from 'aws-cdk-lib/aws-codepipeline-actions';
 import * as codebuild from 'aws-cdk-lib/aws-codebuild';
 import { Artifact } from 'aws-cdk-lib/aws-codepipeline';
 import { Construct } from 'constructs';
-import { Accounts, COMMON_REPO, DOMAIN_NAME, INNER_PIPELINE_INPUT_FOLDER, makeVersionedPipelineStackName, OUTER_PIPELINE_NAME, SOURCE_CODE_KEY } from './model';
+import { Accounts, COMMON_REPO, DOMAIN_NAME, INNER_PIPELINE_INPUT_FOLDER, INNER_PIPELINE_STACK_TEMPLATE_NAME, makeVersionedPipelineStackName, OUTER_PIPELINE_NAME, SOURCE_CODE_KEY } from './model';
 import { IRole } from 'aws-cdk-lib/aws-iam';
 import { Bucket } from 'aws-cdk-lib/aws-s3';
 import { Key } from 'aws-cdk-lib/aws-kms';
@@ -13,7 +13,6 @@ interface OuterLevelPipelineStackProps {
     sourceBucketArn: string;
     artifactBucketArn: string;
     artifactBucketKeyArn: string;
-    templatePath: string;
     mainRole: IRole;
     actionsRole: IRole;
 }
@@ -32,7 +31,7 @@ export class OuterLevelPipelineConstruct extends Construct {
             bucketArn: props.artifactBucketArn,
             encryptionKey,
         });
-
+        const templatePath = `${INNER_PIPELINE_STACK_TEMPLATE_NAME}.template.json`;
 
         // S3 source action - you can reference an existing S3 bucket as well
         const sourceOutput = new Artifact();
@@ -80,7 +79,7 @@ export class OuterLevelPipelineConstruct extends Construct {
                     },
                     artifacts: {
                         'base-directory': 'cdk.out', // Output directory from cdk synth
-                        files: [props.templatePath],
+                        files: [templatePath],
                     },
                 }),
                 environment: {
@@ -101,7 +100,7 @@ export class OuterLevelPipelineConstruct extends Construct {
         // Deploy stage
         const deployAction = new cpactions.CloudFormationCreateUpdateStackAction({
             actionName: 'CFN_Deploy',
-            templatePath: synthOutput.atPath(props.templatePath),
+            templatePath: synthOutput.atPath(templatePath),
             stackName: makeVersionedPipelineStackName(targetStackName, targetStackVersion),
             adminPermissions: true,
             role: props.actionsRole,
