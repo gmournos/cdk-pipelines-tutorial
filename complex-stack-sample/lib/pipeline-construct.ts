@@ -2,7 +2,7 @@ import { Construct } from 'constructs';
 import { StackProps, Stack, Stage, Fn, Tags } from 'aws-cdk-lib';
 import { CodeBuildStep, CodePipeline, CodePipelineSource, IFileSetProducer, ManualApprovalStep } from 'aws-cdk-lib/pipelines';
 import { ComplexStackSampleStack } from './complex-stack-sample-stack';
-import { Accounts, COMMON_REPO, DEPLOYER_STACK_NAME_TAG, DOMAIN_NAME, INNER_PIPELINE_INPUT_FOLDER, makeVersionedPipelineName, STACK_DEPLOYED_AT_TAG, STACK_NAME_TAG, STACK_VERSION_TAG } from './model';
+import { Accounts, CHANGESET_RENAME_MACRO, COMMON_REPO, DEPLOYER_STACK_NAME_TAG, DOMAIN_NAME, INNER_PIPELINE_INPUT_FOLDER, makeVersionedPipelineName, STACK_DEPLOYED_AT_TAG, STACK_NAME_TAG, STACK_VERSION_TAG } from './model';
 import { Effect, PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import { Bucket } from 'aws-cdk-lib/aws-s3';
 import { StackExports } from './model';
@@ -127,6 +127,7 @@ export class PipelineStack extends Stack {
         pipeline.buildPipeline();
 
         sourceBucket.grantRead(pipeline.pipeline.role);
+        this.addTransform(CHANGESET_RENAME_MACRO); 
 
         Tags.of(pipeline.pipeline).add(STACK_NAME_TAG, props.containedStackName);
         Tags.of(pipeline.pipeline).add(STACK_VERSION_TAG, props.containedStackVersion);
