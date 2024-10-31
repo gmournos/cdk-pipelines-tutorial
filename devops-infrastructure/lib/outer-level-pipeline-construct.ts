@@ -4,7 +4,7 @@ import * as cpactions from 'aws-cdk-lib/aws-codepipeline-actions';
 import * as codebuild from 'aws-cdk-lib/aws-codebuild';
 import { Artifact } from 'aws-cdk-lib/aws-codepipeline';
 import { Construct } from 'constructs';
-import { Accounts, COMMON_REPO, DOMAIN_NAME, makeVersionedPipelineStackName, OUTER_PIPELINE_NAME, SOURCE_CODE_KEY } from './model';
+import { Accounts, COMMON_REPO, DOMAIN_NAME, INNER_PIPELINE_INPUT_FOLDER, makeVersionedPipelineStackName, OUTER_PIPELINE_NAME, SOURCE_CODE_KEY } from './model';
 import { IRole } from 'aws-cdk-lib/aws-iam';
 import { Bucket } from 'aws-cdk-lib/aws-s3';
 import { Key } from 'aws-cdk-lib/aws-kms';
@@ -69,6 +69,7 @@ export class OuterLevelPipelineConstruct extends Construct {
                                 'npx aws-cdk --version',
                                 'targetStackName=$(jq -r .stackName cdk.context.json)',
                                 'targetStackVersion=$(jq -r .version cdk.context.json)',
+                                `aws s3 cp s3://${sourceBucket.bucketName}/${SOURCE_CODE_KEY} s3://${sourceBucket.bucketName}/${INNER_PIPELINE_INPUT_FOLDER}/$targetStackName-$targetStackVersion.zip`,
                                 `aws codeartifact login --tool npm --repository ${COMMON_REPO} --domain ${DOMAIN_NAME} --domain-owner ${Accounts.DEVOPS}`,
                                 'npm ci',
                             ],
