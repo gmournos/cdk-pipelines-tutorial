@@ -70,6 +70,13 @@ export class PipelineStack extends Stack {
                 ],
                 commands: ['npm ci', 'npm run build', 'npx aws-cdk synth'], // Build and synthesize the CDK app
                 rolePolicyStatements: codeArtifactPermissions,
+                env: {
+                    DEVOPS_ACCOUNT: process.env.DEVOPS_ACCOUNT!,
+                    DEVELOPMENT_ACCOUNT: process.env.DEVELOPMENT_ACCOUNT!, 
+                    TEST_ACCOUNT: process.env.TEST_ACCOUNT!,
+                    ACCEPTANCE_ACCOUNT: process.env.ACCEPTANCE_ACCOUNT!,
+                    PRODUCTION_ACCOUNT: process.env.PRODUCTION_ACCOUNT!,
+                },
             }),
         });
 
