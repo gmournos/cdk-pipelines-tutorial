@@ -4,13 +4,12 @@ import * as cpactions from 'aws-cdk-lib/aws-codepipeline-actions';
 import * as codebuild from 'aws-cdk-lib/aws-codebuild';
 import { Action, Artifact } from 'aws-cdk-lib/aws-codepipeline';
 import { Construct } from 'constructs';
-import { Accounts, COMMON_REPO, DOMAIN_NAME, makeVersionedPipelineStackName, OUTER_PIPELINE_NAME } from './model';
+import { Accounts, COMMON_REPO, DOMAIN_NAME, makeVersionedPipelineStackName, OUTER_PIPELINE_NAME, SOURCE_CODE_KEY } from './model';
 import { IRole } from 'aws-cdk-lib/aws-iam';
-import { IBucket } from 'aws-cdk-lib/aws-s3';
+import { Bucket, IBucket } from 'aws-cdk-lib/aws-s3';
 
 interface OuterLevelPipelineStackProps {
-    sourceAction: Action;
-    sourceOutput: Artifact;
+    sourceBucketArn: string;
     templatePath: string;
     mainRole: IRole;
     actionsRole: IRole;
@@ -21,12 +20,28 @@ export class OuterLevelPipelineConstruct extends Construct {
     constructor(scope: cdk.App, id: string, props: OuterLevelPipelineStackProps) {
         super(scope, id);
 
+        const sourceBucket = Bucket.fromBucketAttributes(this, 'pipeline-source-bucket', {
+            bucketArn: props.sourceBucketArn,
+        });
+
+        // S3 source action - you can reference an existing S3 bucket as well
+        const sourceOutput = new Artifact();
+        const sourceAction = new cpactions.S3SourceAction({
+            actionName: 'S3Source',
+            bucket: sourceBucket,
+            bucketKey: SOURCE_CODE_KEY,
+            output: sourceOutput,
+            role: props.actionsRole,
+            trigger: cpactions.S3Trigger.NONE,
+        });
+
+
         // Synthesize stage - running `cdk synth`
         const synthOutput = new Artifact();
         const synthAction = new cpactions.CodeBuildAction({
             actionName: 'Synth',
             role: props.mainRole,
-            input: props.sourceOutput,
+            input: sourceOutput,
             outputs: [synthOutput],
             project: new codebuild.PipelineProject(this, 'synth-outer-pipeline', {
                 role: props.actionsRole,
@@ -89,7 +104,7 @@ export class OuterLevelPipelineConstruct extends Construct {
             stages: [
                 {
                     stageName: 'Source',
-                    actions: [props.sourceAction],
+                    actions: [sourceAction],
                 },
                 {
                     stageName: 'Synth',
