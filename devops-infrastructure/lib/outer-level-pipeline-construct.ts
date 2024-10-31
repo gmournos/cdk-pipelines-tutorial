@@ -7,6 +7,7 @@ import { Accounts, COMMON_REPO, DOMAIN_NAME, INNER_PIPELINE_INPUT_FOLDER, INNER_
 import { IRole } from 'aws-cdk-lib/aws-iam';
 import { Bucket } from 'aws-cdk-lib/aws-s3';
 import { Key } from 'aws-cdk-lib/aws-kms';
+import { CfnCapabilities } from 'aws-cdk-lib';
 
 interface OuterLevelPipelineStackProps {
     sourceBucketArn: string;
@@ -106,6 +107,7 @@ export class OuterLevelPipelineConstruct extends Construct {
             adminPermissions: false,
             role: props.actionsRole,
             deploymentRole: props.deploymentRole,
+            cfnCapabilities: [CfnCapabilities.AUTO_EXPAND, CfnCapabilities.NAMED_IAM],
         });
 
         // Create the pipeline

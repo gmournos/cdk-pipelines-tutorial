@@ -17,6 +17,7 @@ export const INNER_PIPELINE_INPUT_FOLDER = 'inner-pipeline-input'
 export const INNER_PIPELINE_STACK_TEMPLATE_NAME = 'inner-pipeline-stack';
 
 export const SOURCE_CODE_KEY = 'deployments/pipeline-input.zip';
+export const CHANGESET_RENAME_MACRO = 'uniform-pipeline-changeset-rename-macro';
 
 export enum StackExports {
     PIPELINE_SOURCE_BUCKET_ARN_REF = 'uniform-pipeline-source-bucket-arn-ref',

@@ -4,8 +4,8 @@ import { CodeArtifactCdkConstruct } from './codartifact-construct';
 import { SourceCodeBucketConstruct } from './source-code-bucket-construct';
 import { ArtifactBucketConstruct } from './artifact-bucket-construct';
 import { OuterLevelPipelineConstruct } from './outer-level-pipeline-construct';
-import { Role } from 'aws-cdk-lib/aws-iam';
 import { PipelinesRoleConstruct } from './pipeline-roles-constructs';
+import { PipelineMacrosConstruct } from './pipeline-macros-construct';
 
 export class DevopsInfrastructureStack extends cdk.Stack {
     constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -27,6 +27,7 @@ export class DevopsInfrastructureStack extends cdk.Stack {
             actionsRole: pipelineRolesConstruct.outerPipelineActionsRole,
             deploymentRole: pipelineRolesConstruct.outerPipelineDeploymentRole,
         });
+        new PipelineMacrosConstruct(this, 'pipeline-macros')
         
     }
 }
