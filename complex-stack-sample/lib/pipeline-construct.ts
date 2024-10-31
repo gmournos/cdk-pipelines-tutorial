@@ -87,7 +87,7 @@ export class PipelineStack extends Stack {
                     'npm install -g aws-cdk',
                     `aws codeartifact login --tool npm --repository ${COMMON_REPO} --domain ${DOMAIN_NAME} --domain-owner ${Accounts.DEVOPS}`,
                 ],
-                commands: ['npm ci', 'npm run build', 'npx aws-cdk synth'], // Build and synthesize the CDK app
+                commands: ['npm ci', 'npm run build', 'npx aws-cdk synth -c pipeline=true'], // Build and synthesize the CDK app
                 rolePolicyStatements: codeArtifactPermissions,
                 env: {
                     DEVOPS_ACCOUNT: process.env.DEVOPS_ACCOUNT!,
