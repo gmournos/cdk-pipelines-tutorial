@@ -1,4 +1,3 @@
-import * as cdk from 'aws-cdk-lib';
 import * as codepipeline from 'aws-cdk-lib/aws-codepipeline';
 import * as cpactions from 'aws-cdk-lib/aws-codepipeline-actions';
 import * as codebuild from 'aws-cdk-lib/aws-codebuild';
@@ -18,7 +17,7 @@ interface OuterLevelPipelineStackProps {
 }
 
 export class OuterLevelPipelineConstruct extends Construct {
-    constructor(scope: cdk.App, id: string, props: OuterLevelPipelineStackProps) {
+    constructor(scope: Construct, id: string, props: OuterLevelPipelineStackProps) {
         super(scope, id);
 
         const sourceBucket = Bucket.fromBucketAttributes(this, 'pipeline-source-bucket', {
@@ -57,7 +56,7 @@ export class OuterLevelPipelineConstruct extends Construct {
                 buildSpec: codebuild.BuildSpec.fromObject({
                     version: '0.2',
                     env: {
-                        'exported-variables': ['targetStackName', 'targetStackVersion'],
+                        'exported-variables': ['targetStackName', 'targetStackVersion', 'replacedTargetStackVersion'],
                     },
                     phases: {
                         install: {
@@ -68,6 +67,7 @@ export class OuterLevelPipelineConstruct extends Construct {
                                 'npx aws-cdk --version',
                                 'targetStackName=$(jq -r .stackName cdk.context.json)',
                                 'targetStackVersion=$(jq -r .version cdk.context.json)',
+                                "replacedTargetStackVersion=$(jq -r .version cdk.context.json | tr '.' '-')",
                                 `aws s3 cp s3://${sourceBucket.bucketName}/${SOURCE_CODE_KEY} s3://${sourceBucket.bucketName}/${INNER_PIPELINE_INPUT_FOLDER}/$targetStackName-$targetStackVersion.zip`,
                                 `aws codeartifact login --tool npm --repository ${COMMON_REPO} --domain ${DOMAIN_NAME} --domain-owner ${Accounts.DEVOPS}`,
                                 'npm ci',
@@ -95,13 +95,13 @@ export class OuterLevelPipelineConstruct extends Construct {
             }),
         });
         const targetStackName = synthAction.variable('targetStackName');
-        const targetStackVersion = synthAction.variable('targetStackVersion');
-
+        const replacedTargetStackVersion = synthAction.variable('replacedTargetStackVersion');
+        
         // Deploy stage
         const deployAction = new cpactions.CloudFormationCreateUpdateStackAction({
             actionName: 'CFN_Deploy',
             templatePath: synthOutput.atPath(templatePath),
-            stackName: makeVersionedPipelineStackName(targetStackName, targetStackVersion),
+            stackName: `${targetStackName}-${replacedTargetStackVersion}-pipeline-stack`,
             adminPermissions: true,
             role: props.actionsRole,
         });
