@@ -13,10 +13,12 @@
     "@types/jest": "^29.5.14",
     "@types/node": "22.8.4",
     "aws-cdk": "2.164.1",
+    "esbuild": "^0.24.0",
     "ts-node": "^10.9.2",
     "typescript": "~5.6.3"
   },
   "dependencies": {
+    "@aws-sdk/client-codepipeline": "^3.682.0",
     "@tsconfig/node20": "^20.1.4",
     "aws-cdk-lib": "2.164.1",
     "constructs": "^10.4.2"
