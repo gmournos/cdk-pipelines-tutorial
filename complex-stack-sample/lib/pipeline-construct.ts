@@ -42,20 +42,7 @@ export const hasPostmanBuildSpec = () => {
     return fileExists(BUILD_SPEC_POSTMAN_DEF_FILE);
 };
 
-class DeploymentStage extends Stage {
-    readonly containedStack: Stack;
-    constructor(scope: Construct, targetAccount: string, pipelineStackProps: PipelineStackProps) {
-        super(scope, `${pipelineStackProps.containedStackName}-pipeline-deployment-${targetAccount}`, {
-            stageName: makeDeploymentStageName(targetAccount),
-        });
-        this.containedStack = new ComplexStackSampleStack(this, 'artifacts-stack', {
-            ...pipelineStackProps.containedStackProps,
-            stackName: pipelineStackProps.containedStackName
-        });
-        Tags.of(this.containedStack).add(STACK_VERSION_TAG, pipelineStackProps.containedStackVersion);
-        Tags.of(this.containedStack).add(STACK_DEPLOYED_AT_TAG, (new Date()).toISOString());
-    }
-}
+
 
 export interface PipelineStackProps extends StackProps {
     containedStackProps: StackProps;
@@ -64,6 +51,54 @@ export interface PipelineStackProps extends StackProps {
 }
 
 export class PipelineStack extends Stack {
+    protected readonly pipeline: CodePipeline;
+    protected readonly codeSource: CodePipelineSource;
+
+    public createDeploymentStage(targetAccount: string, requiresApproval: boolean, shouldSmokeTest: boolean, pipelineStackProps: PipelineStackProps) {
+
+        class DeploymentStage extends Stage {
+            readonly containedStack: Stack;
+
+            constructor(scope: Construct, targetAccount: string, pipelineStackProps: PipelineStackProps) {
+                super(scope, `${pipelineStackProps.containedStackName}-pipeline-deployment-${targetAccount}`, {
+                    stageName: makeDeploymentStageName(targetAccount),
+                });
+                this.containedStack = new ComplexStackSampleStack(this, 'artifacts-stack', {
+                    ...pipelineStackProps.containedStackProps,
+                    stackName: pipelineStackProps.containedStackName,
+                    env: { 
+                        account: targetAccount,
+                        region: this.region
+                    }, 
+                });
+                Tags.of(this.containedStack).add(STACK_VERSION_TAG, pipelineStackProps.containedStackVersion);
+                Tags.of(this.containedStack).add(STACK_DEPLOYED_AT_TAG, (new Date()).toISOString());
+            }
+        }
+
+        const resultStage = new DeploymentStage(this, targetAccount, pipelineStackProps);
+        const approval = requiresApproval ? {
+            stackSteps: [ {
+                stack: resultStage.containedStack,
+                changeSet: [this.makeManualApprovalStep(targetAccount, pipelineStackProps)],
+            }],
+        } : {} ;
+        const stage = this.pipeline.addStage(resultStage, approval);
+
+        if (shouldSmokeTest && hasPostmanSpec()) {
+            stage.addPost(this.makePostmanCodeBuild(targetAccount));
+        }
+    }
+
+    protected makeManualApprovalStep(targetAccount: string, pipelineStackProps: PipelineStackProps) {
+        const accountName = getReadableAccountName(targetAccount);
+
+        return new ManualApprovalStep(`${pipelineStackProps.containedStackName}-${pipelineStackProps.containedStackVersion}-approval-promote-to-${accountName}`, {
+            comment: `Approve to deploy to ${accountName}`,
+        });
+    }
+
+
     constructor(scope: Construct, id: string, props: PipelineStackProps) {
         super(scope, id, props);
 
@@ -78,55 +113,35 @@ export class PipelineStack extends Stack {
         const sourceBucket = Bucket.fromBucketAttributes(this, 'pipeline-source-bucket', {
             bucketArn: Fn.importValue(StackExports.PIPELINE_SOURCE_BUCKET_ARN_REF),
         });
-        const codeSource = CodePipelineSource.s3(sourceBucket, `${INNER_PIPELINE_INPUT_FOLDER}/${props.containedStackName}-${props.containedStackVersion}.zip`, {
+        this.codeSource = CodePipelineSource.s3(sourceBucket, `${INNER_PIPELINE_INPUT_FOLDER}/${props.containedStackName}-${props.containedStackVersion}.zip`, {
             trigger: S3Trigger.NONE,
         });
 
         // Create a new CodePipeline
-        const pipeline = new CodePipeline(this, 'cicd-pipeline', {
+        this.pipeline = new CodePipeline(this, 'cicd-pipeline', {
             artifactBucket,
             pipelineName: makeVersionedPipelineName(props.containedStackName, props.containedStackVersion),
             // Define the synthesis step
-            synth: this.makeMainBuildStep(codeSource), 
+            synth: this.makeMainBuildStep(this.codeSource), 
         });
 
+        
         // Add a deployment stage to TEST
-        const testStage = pipeline.addStage(new DeploymentStage(this, Accounts.TEST, props));
-        if (hasPostmanSpec()) {
-            testStage.addPost(this.makePostmanCodeBuild(Accounts.TEST, codeSource));
-        }
+        this.createDeploymentStage(Accounts.TEST, false, true, props); 
 
         // Add a deployment stage to ACCEPTANCE
-
-        const deployToAcceptanceStage = new DeploymentStage(this, Accounts.ACCEPTANCE, {
-            ...props,
-            env: {
-                account: Accounts.ACCEPTANCE,
-                region: this.region,
-            }
-        });
-        const approvalAcceptance = {
-            stackSteps: [ {
-                stack: deployToAcceptanceStage.containedStack,
-                changeSet: [
-                    new ManualApprovalStep(`${props.containedStackName}-${props.containedStackVersion}-approval-promote-to-${Accounts.ACCEPTANCE}`, {
-                        comment: `Approve to deploy to ${Accounts.ACCEPTANCE}`,
-                    }),
-                ],
-            }],
-        };
-        pipeline.addStage(deployToAcceptanceStage, approvalAcceptance);
+        this.createDeploymentStage(Accounts.ACCEPTANCE, true, false, props); 
         
-        pipeline.buildPipeline();
+        this.pipeline.buildPipeline();
 
         this.addTransform(CHANGESET_RENAME_MACRO); 
         this.addTransform(ROLE_REASSIGN_MACRO); 
-        disableTransitions(pipeline.pipeline.node.defaultChild as CfnPipeline, 
+        disableTransitions(this.pipeline.pipeline.node.defaultChild as CfnPipeline, 
             [makeDeploymentStageName(Accounts.ACCEPTANCE)], 'Avoid manual approval expiration after one week');
 
-        Tags.of(pipeline.pipeline).add(STACK_NAME_TAG, props.containedStackName);
-        Tags.of(pipeline.pipeline).add(STACK_VERSION_TAG, props.containedStackVersion);
-        Tags.of(pipeline.pipeline).add(DEPLOYER_STACK_NAME_TAG, this.stackName);
+        Tags.of(this.pipeline.pipeline).add(STACK_NAME_TAG, props.containedStackName);
+        Tags.of(this.pipeline.pipeline).add(STACK_VERSION_TAG, props.containedStackVersion);
+        Tags.of(this.pipeline.pipeline).add(DEPLOYER_STACK_NAME_TAG, this.stackName);
     }
 
     
@@ -162,16 +177,16 @@ export class PipelineStack extends Stack {
         };
     }
 
-    protected makePostmanCodeBuild(account: string, codeSource: CodePipelineSource) {
+    protected makePostmanCodeBuild(account: string) {
         
-        const defaultBuildSpecProps: CodeBuildStepProps = this.makePostmanCodeBuildDefaultBuildspec(account, codeSource);
+        const defaultBuildSpecProps: CodeBuildStepProps = this.makePostmanCodeBuildDefaultBuildspec(account);
         const buildSpecProps = hasPostmanBuildSpec() ? this.overrideBuildSpecPropsFromBuildspecYamlFile(defaultBuildSpecProps,
             BUILD_SPEC_POSTMAN_DEF_FILE) : defaultBuildSpecProps;
 
         return new CodeBuildStep(`test-run-postman-${account}`, buildSpecProps);
     }
 
-    protected makePostmanCodeBuildDefaultBuildspec(account: string, codeSource: CodePipelineSource) {
+    protected makePostmanCodeBuildDefaultBuildspec(account: string) {
 
         const accountName = getReadableAccountName(account);
 
@@ -181,7 +196,7 @@ export class PipelineStack extends Stack {
             buildEnvironment: {
                 buildImage: LinuxBuildImage.STANDARD_7_0,
             },
-            input: codeSource,
+            input: this.codeSource,
             installCommands: [
                 `aws codeartifact login --tool npm --repository ${COMMON_REPO} --domain ${DOMAIN_NAME} --domain-owner ${Accounts.DEVOPS}`,
                 'npm install -g newman',
