@@ -22,6 +22,10 @@ export const ROLE_REASSIGN_MACRO = 'uniform-pipeline-role-reassign-macro';
 
 export const POSTMAN_REPORT_GROUP = 'uniform-pipeline-postman-report-group';
 
+export const PIPELINES_BUILD_SPEC_DEF_FILE = 'custom-buildspec.yaml';
+export const PIPELINES_POSTMAN_SPEC_DEF_FILE = 'postman.json';
+export const PIPELINES_BUILD_SPEC_POSTMAN_DEF_FILE = 'custom-buildspec-apitests.yaml';
+
 export enum StackExports {
     PIPELINE_SOURCE_BUCKET_ARN_REF = 'uniform-pipeline-source-bucket-arn-ref',
     PIPELINE_ARTIFACT_BUCKET_KEY_ARN_REF = 'uniform-pipeline-artifact-bucket-key-arn-ref',

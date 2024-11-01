@@ -1,24 +1,22 @@
 import { Construct } from 'constructs';
 import { StackProps, Stack, Stage, Fn, Tags } from 'aws-cdk-lib';
 import { CodeBuildStep, CodeBuildStepProps, CodePipeline, CodePipelineSource, ManualApprovalStep } from 'aws-cdk-lib/pipelines';
-import { Accounts, CHANGESET_RENAME_MACRO, COMMON_REPO, DEPLOYER_STACK_NAME_TAG, DOMAIN_NAME, getReadableAccountName, INNER_PIPELINE_INPUT_FOLDER, makeVersionedPipelineName, ROLE_REASSIGN_MACRO, STACK_DEPLOYED_AT_TAG, STACK_NAME_TAG, STACK_VERSION_TAG } from './model';
+import { Accounts, CHANGESET_RENAME_MACRO, DEPLOYER_STACK_NAME_TAG, getReadableAccountName, 
+    INNER_PIPELINE_INPUT_FOLDER, makeVersionedPipelineName, PIPELINES_BUILD_SPEC_DEF_FILE, 
+    PIPELINES_BUILD_SPEC_POSTMAN_DEF_FILE, PIPELINES_POSTMAN_SPEC_DEF_FILE, ROLE_REASSIGN_MACRO, 
+    STACK_DEPLOYED_AT_TAG, STACK_NAME_TAG, STACK_VERSION_TAG } from './model';
 import { Bucket } from 'aws-cdk-lib/aws-s3';
 import { StackExports } from './model';
 import { S3Trigger } from 'aws-cdk-lib/aws-codepipeline-actions';
 import { Key } from 'aws-cdk-lib/aws-kms';
 import { CfnPipeline } from 'aws-cdk-lib/aws-codepipeline';
 import * as fs from 'fs';
-import * as yaml from 'js-yaml';
-import { BuildSpec, LinuxBuildImage, ReportGroupType } from 'aws-cdk-lib/aws-codebuild';
+import { makeMainBuildStepDefaultBuildspec, makePostmanCodeBuildDefaultBuildspec, overrideBuildSpecPropsFromBuildspecYamlFile } from './inner-pipeline-util';
 
 
 const makeDeploymentStageName = (accountValue: string) => {
     return `${getReadableAccountName(accountValue)}-deployment`;
 };
-
-const BUILD_SPEC_DEF_FILE = 'custom-buildspec.yaml';
-const POSTMAN_SPEC_DEF_FILE = 'postman.json';
-const BUILD_SPEC_POSTMAN_DEF_FILE = 'custom-buildspec-apitests.yaml';
 
 export const fileExists = (filename: string) => {
     try {
@@ -30,15 +28,15 @@ export const fileExists = (filename: string) => {
 };
 
 export const hasBuildSpec = () => {
-    return fileExists(BUILD_SPEC_DEF_FILE);
+    return fileExists(PIPELINES_BUILD_SPEC_DEF_FILE);
 };
 
 export const hasPostmanSpec = () => {
-    return fileExists(POSTMAN_SPEC_DEF_FILE);
+    return fileExists(PIPELINES_POSTMAN_SPEC_DEF_FILE);
 };
 
 export const hasPostmanBuildSpec = () => {
-    return fileExists(BUILD_SPEC_POSTMAN_DEF_FILE);
+    return fileExists(PIPELINES_BUILD_SPEC_POSTMAN_DEF_FILE);
 };
 
 export type ContainedStackClassConstructor<P extends StackProps = StackProps> = new(c: Construct, id: string, p: P) => Stack;
@@ -102,7 +100,6 @@ export class PipelineStack<P extends StackProps = StackProps> extends Stack {
         });
     }
 
-
     constructor(scope: Construct, id: string, props: PipelineStackProps) {
         super(scope, id, props);
 
@@ -128,7 +125,6 @@ export class PipelineStack<P extends StackProps = StackProps> extends Stack {
             // Define the synthesis step
             synth: this.makeMainBuildStep(this.codeSource), 
         });
-
         
         // Add a deployment stage to TEST
         this.createDeploymentStage(Accounts.TEST, false, true, props); 
@@ -150,110 +146,20 @@ export class PipelineStack<P extends StackProps = StackProps> extends Stack {
 
     
     protected makeMainBuildStep(codeSource: CodePipelineSource) {
-        const defaultBuildSpecProps = this.makeMainBuildStepDefaultBuildspec(codeSource);
+        const defaultBuildSpecProps = makeMainBuildStepDefaultBuildspec(codeSource);
         
-        const buildSpecProps = hasBuildSpec() ? this.overrideBuildSpecPropsFromBuildspecYamlFile(defaultBuildSpecProps, BUILD_SPEC_DEF_FILE) : defaultBuildSpecProps;
+        const buildSpecProps = hasBuildSpec() ? overrideBuildSpecPropsFromBuildspecYamlFile(defaultBuildSpecProps, PIPELINES_BUILD_SPEC_DEF_FILE) : defaultBuildSpecProps;
 
         return new CodeBuildStep('synth-step', buildSpecProps);
     }
 
-    protected makeMainBuildStepDefaultBuildspec(codeSource: CodePipelineSource) : CodeBuildStepProps{
-        return {
-            buildEnvironment: {
-                buildImage: LinuxBuildImage.STANDARD_7_0,
-            },
-            input: codeSource,
-            installCommands: [
-                'npm install -g aws-cdk',
-                `aws codeartifact login --tool npm --repository ${COMMON_REPO} --domain ${DOMAIN_NAME} --domain-owner ${Accounts.DEVOPS}`,
-            ],
-            commands: [
-                'npm ci', 'npm run build', 'npx aws-cdk synth -c pipeline=true',
-            ],
-
-            env: {
-                DEVOPS_ACCOUNT: process.env.DEVOPS_ACCOUNT!,
-                DEVELOPMENT_ACCOUNT: process.env.DEVELOPMENT_ACCOUNT!, 
-                TEST_ACCOUNT: process.env.TEST_ACCOUNT!,
-                ACCEPTANCE_ACCOUNT: process.env.ACCEPTANCE_ACCOUNT!,
-                PRODUCTION_ACCOUNT: process.env.PRODUCTION_ACCOUNT!,
-            },
-        };
-    }
-
     protected makePostmanCodeBuild(account: string) {
         
-        const defaultBuildSpecProps: CodeBuildStepProps = this.makePostmanCodeBuildDefaultBuildspec(account);
-        const buildSpecProps = hasPostmanBuildSpec() ? this.overrideBuildSpecPropsFromBuildspecYamlFile(defaultBuildSpecProps,
-            BUILD_SPEC_POSTMAN_DEF_FILE) : defaultBuildSpecProps;
+        const defaultBuildSpecProps: CodeBuildStepProps = makePostmanCodeBuildDefaultBuildspec(account, this.codeSource);
+        const buildSpecProps = hasPostmanBuildSpec() ? overrideBuildSpecPropsFromBuildspecYamlFile(defaultBuildSpecProps,
+            PIPELINES_BUILD_SPEC_POSTMAN_DEF_FILE) : defaultBuildSpecProps;
 
         return new CodeBuildStep(`test-run-postman-${account}`, buildSpecProps);
-    }
-
-    protected makePostmanCodeBuildDefaultBuildspec(account: string) {
-
-        const accountName = getReadableAccountName(account);
-
-        const testReportsArn = Fn.importValue(StackExports.POSTMAN_REPORT_GROUP_ARN_REF);
-
-        const defaultBuildSpecProps: CodeBuildStepProps = {
-            buildEnvironment: {
-                buildImage: LinuxBuildImage.STANDARD_7_0,
-            },
-            input: this.codeSource,
-            installCommands: [
-                `aws codeartifact login --tool npm --repository ${COMMON_REPO} --domain ${DOMAIN_NAME} --domain-owner ${Accounts.DEVOPS}`,
-                'npm install -g newman',
-            ],
-            commands: [
-                `echo "Running API tests at ${accountName}"`,
-                `newman run -r junit ${POSTMAN_SPEC_DEF_FILE}`,
-            ],
-            partialBuildSpec: BuildSpec.fromObject({
-
-                reports: {
-                    [testReportsArn]: {
-                        files: ['**/*'],
-                        'base-directory': 'newman',
-                        'discard-paths': true,
-                        type: ReportGroupType.TEST,
-                    },
-                },
-            }),
-        };
-        return defaultBuildSpecProps;
-    }
-
-    
-    protected overrideBuildSpecPropsFromBuildspecYamlFile(defaultBuildSpecProps: CodeBuildStepProps, buildspecFilename: string) {
-        const overridingObject = yaml.load(fs.readFileSync(buildspecFilename, 'utf8')) as Record<string, any>;
-
-        const buildSpecProps = { ...defaultBuildSpecProps } as any;
-
-        const installCommands = overridingObject.phases?.install?.commands;
-        if (installCommands) {
-            buildSpecProps.installCommands = installCommands;
-            delete overridingObject.phases.install.commands;
-        }
-        const buildCommands = overridingObject.phases?.build?.commands;
-        if (buildCommands) {
-            buildSpecProps.commands = buildCommands;
-            delete overridingObject.phases?.build.commands;
-        }
-
-        const baseDirectory = overridingObject.artifacts?.['base-directory'];
-        if (baseDirectory) {
-            buildSpecProps.baseDirectory = baseDirectory;
-            delete overridingObject.artifacts['base-directory'];
-        }
-
-        const buildImage = overridingObject['build-image'] as string;
-        if (buildImage && LinuxBuildImage[buildImage as keyof typeof LinuxBuildImage]) {
-            buildSpecProps.buildEnvironment.buildImage = LinuxBuildImage[buildImage as keyof typeof LinuxBuildImage];
-        }
-
-        buildSpecProps.partialBuildSpec = BuildSpec.fromObject(overridingObject);
-        return buildSpecProps;
     }
 
 }
