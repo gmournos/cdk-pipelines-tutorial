@@ -20,6 +20,8 @@ export const SOURCE_CODE_KEY = 'deployments/pipeline-input.zip';
 export const CHANGESET_RENAME_MACRO = 'uniform-pipeline-changeset-rename-macro';
 export const ROLE_REASSIGN_MACRO = 'uniform-pipeline-role-reassign-macro';
 
+export const POSTMAN_REPORT_GROUP = 'uniform-pipeline-postman-report-group';
+
 export enum StackExports {
     PIPELINE_SOURCE_BUCKET_ARN_REF = 'uniform-pipeline-source-bucket-arn-ref',
     PIPELINE_ARTIFACT_BUCKET_KEY_ARN_REF = 'uniform-pipeline-artifact-bucket-key-arn-ref',
@@ -27,6 +29,7 @@ export enum StackExports {
     OUTER_PIPELINE_MAIN_ROLE_ARN_REF = 'outer-pipeline-main-role-arn-ref',
     OUTER_PIPELINE_ACTIONS_ROLE_ARN_REF = 'outer-pipeline-actions-role-arn-ref',
     OUTER_PIPELINE_DEPLOYMENT_ROLE_ARN_REF = 'outer-pipeline-deploymenent-role-arn-ref',
+    POSTMAN_REPORT_GROUP_ARN_REF = 'uniform-pipeline-postman-report-group-arn-ref',
 };
 
 export const makeVersionedPipelineName = (containedStackName: string, containedStackVersion: string) => {
@@ -71,4 +74,3 @@ export const getReadableAccountName = (accountValue: string) => {
         throw new Error('Account not found');
     }
 };
-
