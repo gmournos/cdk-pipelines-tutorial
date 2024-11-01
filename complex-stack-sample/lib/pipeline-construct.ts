@@ -17,6 +17,22 @@ const makeDeploymentStageName = (accountValue: string) => {
     return `${getReadableAccountName(accountValue)}-deployment`;
 };
 
+const BULID_SPEC_DEF_FILE = 'custom-buildspec.yaml';
+
+export const fileExists = (filename: string) => {
+    try {
+        fs.accessSync(filename);
+        return true;
+    } catch (err) {
+        return false;
+    }
+};
+
+
+export const hasBuildSpec = () => {
+    return fileExists(BULID_SPEC_DEF_FILE);
+};
+
 class DeploymentStage extends Stage {
     readonly containedStack: Stack;
     constructor(scope: Construct, targetAccount: string, pipelineStackProps: PipelineStackProps) {
@@ -62,21 +78,7 @@ export class PipelineStack extends Stack {
             artifactBucket,
             pipelineName: makeVersionedPipelineName(props.containedStackName, props.containedStackVersion),
             // Define the synthesis step
-            synth: new CodeBuildStep('synth-step', {
-                input: codeSource,
-                installCommands: [
-                    'npm install -g aws-cdk',
-                    `aws codeartifact login --tool npm --repository ${COMMON_REPO} --domain ${DOMAIN_NAME} --domain-owner ${Accounts.DEVOPS}`,
-                ],
-                commands: ['npm ci', 'npm run build', 'npx aws-cdk synth -c pipeline=true'], // Build and synthesize the CDK app
-                env: {
-                    DEVOPS_ACCOUNT: process.env.DEVOPS_ACCOUNT!,
-                    DEVELOPMENT_ACCOUNT: process.env.DEVELOPMENT_ACCOUNT!, 
-                    TEST_ACCOUNT: process.env.TEST_ACCOUNT!,
-                    ACCEPTANCE_ACCOUNT: process.env.ACCEPTANCE_ACCOUNT!,
-                    PRODUCTION_ACCOUNT: process.env.PRODUCTION_ACCOUNT!,
-                },
-            }),
+            synth: this.makeMainBuildStep(codeSource), 
         });
 
         // Add a deployment stage to TEST
@@ -113,6 +115,39 @@ export class PipelineStack extends Stack {
         Tags.of(pipeline.pipeline).add(STACK_NAME_TAG, props.containedStackName);
         Tags.of(pipeline.pipeline).add(STACK_VERSION_TAG, props.containedStackVersion);
         Tags.of(pipeline.pipeline).add(DEPLOYER_STACK_NAME_TAG, this.stackName);
+    }
+
+    
+    protected makeMainBuildStep(codeSource: CodePipelineSource) {
+        const defaultBuildSpecProps = this.makeMainBuildStepDefaultBuildspec(codeSource);
+
+        const buildSpecProps = hasBuildSpec() ? this.overrideBuildSpecPropsFromBuildspecYamlFile(defaultBuildSpecProps, BULID_SPEC_DEF_FILE) : defaultBuildSpecProps;
+
+        return new CodeBuildStep('synth-step', buildSpecProps);
+    }
+
+    protected makeMainBuildStepDefaultBuildspec(codeSource: CodePipelineSource) : CodeBuildStepProps{
+        return {
+            buildEnvironment: {
+                buildImage: LinuxBuildImage.STANDARD_7_0,
+            },
+            input: codeSource,
+            installCommands: [
+                'npm install -g aws-cdk',
+                `aws codeartifact login --tool npm --repository ${COMMON_REPO} --domain ${DOMAIN_NAME} --domain-owner ${Accounts.DEVOPS}`,
+            ],
+            commands: [
+                'npm ci', 'npm run build', 'npx aws-cdk synth -c pipeline=true',
+            ],
+
+            env: {
+                DEVOPS_ACCOUNT: process.env.DEVOPS_ACCOUNT!,
+                DEVELOPMENT_ACCOUNT: process.env.DEVELOPMENT_ACCOUNT!, 
+                TEST_ACCOUNT: process.env.TEST_ACCOUNT!,
+                ACCEPTANCE_ACCOUNT: process.env.ACCEPTANCE_ACCOUNT!,
+                PRODUCTION_ACCOUNT: process.env.PRODUCTION_ACCOUNT!,
+            },
+        };
     }
 
     
