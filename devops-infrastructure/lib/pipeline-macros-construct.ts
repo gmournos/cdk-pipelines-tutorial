@@ -27,7 +27,7 @@ export class PipelineMacrosConstruct extends Construct {
                 functionName: 'uniform-pipeline-changeset-rename-function',
                 runtime: Runtime.NODEJS_20_X,
                 handler: 'alterChangesetNames',
-                entry: join('lambda', 'cloudformation', 'rename-changesets-macro.ts'),
+                entry: join('lambda', 'cloudformation', 'macros', 'rename-changesets-macro.ts'),
                 timeout: Duration.minutes(3),
                 role: lambdaRole,
             },
