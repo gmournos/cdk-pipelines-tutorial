@@ -1,0 +1,40 @@
+{
+	"info": {
+		"_postman_id": "12484110-1702-4544-bec8-320ba28e626c",
+		"name": "AmazonStatusCheck",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Amazon Health Check",
+			"item": [
+				{
+					"name": "Check Status Code",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "https://www.amazon.com",
+							"protocol": "https",
+							"host": ["www", "amazon", "com"]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}
