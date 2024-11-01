@@ -1,0 +1,25 @@
+{
+  "name": "@pipelines/cli-authenticator",
+  "version": "1.2.1",
+  "description": "CLI authenticator",
+  "bin": {
+    "cli-login": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w"
+  },
+  "dependencies": {
+    "@aws-amplify/auth": "5.6.5",
+    "@aws-sdk/client-cognito-identity": "3.476.0",
+    "@aws-sdk/credential-providers": "3.476.0",
+    "aws-amplify": "5.3.11",
+    "node": "21.2.0"
+  },
+  "devDependencies": {
+    "@tsconfig/node20": "^20.1.4",
+    "@types/node": "20.10.5",
+    "ts-node": "10.9.2",
+    "typescript": "5.3.3"
+  }
+}
