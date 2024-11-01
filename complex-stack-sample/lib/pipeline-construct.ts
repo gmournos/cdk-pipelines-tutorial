@@ -2,8 +2,7 @@ import { Construct } from 'constructs';
 import { StackProps, Stack, Stage, Fn, Tags } from 'aws-cdk-lib';
 import { CodeBuildStep, CodePipeline, CodePipelineSource, ManualApprovalStep } from 'aws-cdk-lib/pipelines';
 import { ComplexStackSampleStack } from './complex-stack-sample-stack';
-import { Accounts, CHANGESET_RENAME_MACRO, COMMON_REPO, DEPLOYER_STACK_NAME_TAG, DOMAIN_NAME, getReadableAccountName, INNER_PIPELINE_INPUT_FOLDER, makeVersionedPipelineName, STACK_DEPLOYED_AT_TAG, STACK_NAME_TAG, STACK_VERSION_TAG } from './model';
-import { Effect, PolicyStatement } from 'aws-cdk-lib/aws-iam';
+import { Accounts, CHANGESET_RENAME_MACRO, COMMON_REPO, DEPLOYER_STACK_NAME_TAG, DOMAIN_NAME, getReadableAccountName, INNER_PIPELINE_INPUT_FOLDER, makeVersionedPipelineName, ROLE_REASSIGN_MACRO, STACK_DEPLOYED_AT_TAG, STACK_NAME_TAG, STACK_VERSION_TAG } from './model';
 import { Bucket } from 'aws-cdk-lib/aws-s3';
 import { StackExports } from './model';
 import { S3Trigger } from 'aws-cdk-lib/aws-codepipeline-actions';
@@ -54,34 +53,6 @@ export class PipelineStack extends Stack {
             trigger: S3Trigger.NONE,
         });
 
-        const codeArtifactPermissions = [
-            new PolicyStatement({
-                sid: 'AllowArtifactoryLogin',
-                effect: Effect.ALLOW,
-                actions: [
-                    'codeartifact:GetAuthorizationToken',
-                    'codeartifact:GetRepositoryEndpoint',
-                    'codeartifact:ReadFromRepository',
-                ],
-                resources: [
-                    // Grant access only to the specific domain and repository
-                    `arn:aws:codeartifact:${this.region}:${this.account}:domain/${DOMAIN_NAME}`,
-                    `arn:aws:codeartifact:${this.region}:${this.account}:repository/${DOMAIN_NAME}/${COMMON_REPO}`,
-                ],
-            }),
-            new PolicyStatement({
-                sid: 'AllowCodeArtifactStsLogin',
-                effect: Effect.ALLOW,
-                actions: ['sts:GetServiceBearerToken'],
-                resources: ['*'], // `sts:GetServiceBearerToken` targets sts service-wide
-                conditions: {
-                    StringEquals: {
-                        'sts:AWSServiceName': 'codeartifact.amazonaws.com',
-                    },
-                },
-            }),
-        ];
-
         // Create a new CodePipeline
         const pipeline = new CodePipeline(this, 'cicd-pipeline', {
             artifactBucket,
@@ -94,7 +65,6 @@ export class PipelineStack extends Stack {
                     `aws codeartifact login --tool npm --repository ${COMMON_REPO} --domain ${DOMAIN_NAME} --domain-owner ${Accounts.DEVOPS}`,
                 ],
                 commands: ['npm ci', 'npm run build', 'npx aws-cdk synth -c pipeline=true'], // Build and synthesize the CDK app
-                rolePolicyStatements: codeArtifactPermissions,
                 env: {
                     DEVOPS_ACCOUNT: process.env.DEVOPS_ACCOUNT!,
                     DEVELOPMENT_ACCOUNT: process.env.DEVELOPMENT_ACCOUNT!, 
@@ -131,8 +101,8 @@ export class PipelineStack extends Stack {
 
         pipeline.buildPipeline();
 
-        sourceBucket.grantRead(pipeline.pipeline.role);
         this.addTransform(CHANGESET_RENAME_MACRO); 
+        this.addTransform(ROLE_REASSIGN_MACRO); 
         disableTransitions(pipeline.pipeline.node.defaultChild as CfnPipeline, 
             [makeDeploymentStageName(Accounts.ACCEPTANCE)], 'Avoid manual approval expiration after one week');
 
