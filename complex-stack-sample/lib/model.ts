@@ -47,6 +47,18 @@ export enum PipelineRoles {
     OUTER_PIPELINE_ROLE = 'outer-pipeline-role',
     OUTER_PIPELINE_ACTIONS_ROLE = 'outer-pipeline-actions-role',
     OUTER_PIPELINE_DEPLOYMENT_ROLE = 'outer-pipeline-deployment-deployment-role',
+    INNER_PIPELINE_MAIN_ROLE = 'inner-pipeline-role',
+    INNER_PIPELINE_CODEBUILD_ROLE_SOURCE_STAGE_SOURCE_ACTION = 'inner-pipeline-source-role',
+    INNER_PIPELINE_CODEBUILD_ROLE_BUILD_STAGE_BUILD_CDK_ACTION = 'inner-pipeline-synth-role',
+    INNER_PIPELINE_CODEBUILD_ROLE_DEPLOY_STAGE_APPROVAL_ACTION = 'inner-pipeline-manual-approval-role',
+    INNER_PIPELINE_CODEBUILD_SERVICE_ROLE_SELFUPDATE_PROJECT = 'inner-pipeline-self-mutation-role',
+    INNER_PIPELINE_CODEBUILD_SERVICE_ROLE_ASSETS_PROJECT = 'inner-pipeline-assets-role',
+    INNER_PIPELINE_CODEBUILD_SERVICE_ROLE_CDK_BUILD_PROJECT = 'inner-pipeline-build-service-role',
+    INNER_PIPELINE_CODEBUILD_SERVICE_ROLE_POSTMAN_BUILD_PROJECT = 'inner-pipeline-postman-role',
+    // same permissions are needed for these actions as in build stage/synth action
+    INNER_PIPELINE_CODEBUILD_ROLE_UPDATEPIPELINE_STAGE_SELFMUTATE_ACTION = INNER_PIPELINE_CODEBUILD_ROLE_BUILD_STAGE_BUILD_CDK_ACTION,
+    INNER_PIPELINE_CODEBUILD_ROLE_ASSETS_STAGE_FILEASSET_ACTION = INNER_PIPELINE_CODEBUILD_ROLE_BUILD_STAGE_BUILD_CDK_ACTION,
+    INNER_PIPELINE_CODEBUILD_ROLE_DEPLOY_STAGE_POSTMAN_ACTION = INNER_PIPELINE_CODEBUILD_ROLE_BUILD_STAGE_BUILD_CDK_ACTION,
 };
 
 export const getReadableAccountName = (accountValue: string) => {
