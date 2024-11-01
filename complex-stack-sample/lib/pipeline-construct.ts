@@ -42,8 +42,6 @@ export const hasPostmanBuildSpec = () => {
     return fileExists(BUILD_SPEC_POSTMAN_DEF_FILE);
 };
 
-
-
 export interface PipelineStackProps extends StackProps {
     containedStackProps: StackProps;
     containedStackName: string;
@@ -53,6 +51,7 @@ export interface PipelineStackProps extends StackProps {
 export class PipelineStack extends Stack {
     protected readonly pipeline: CodePipeline;
     protected readonly codeSource: CodePipelineSource;
+    protected readonly stagesWithtransitionsToDisable: string[] = []; 
 
     public createDeploymentStage(targetAccount: string, requiresApproval: boolean, shouldSmokeTest: boolean, pipelineStackProps: PipelineStackProps) {
 
@@ -74,6 +73,9 @@ export class PipelineStack extends Stack {
                 Tags.of(this.containedStack).add(STACK_VERSION_TAG, pipelineStackProps.containedStackVersion);
                 Tags.of(this.containedStack).add(STACK_DEPLOYED_AT_TAG, (new Date()).toISOString());
             }
+        }
+        if (requiresApproval) {
+            this.stagesWithtransitionsToDisable.push(makeDeploymentStageName(targetAccount));
         }
 
         const resultStage = new DeploymentStage(this, targetAccount, pipelineStackProps);
@@ -137,7 +139,7 @@ export class PipelineStack extends Stack {
         this.addTransform(CHANGESET_RENAME_MACRO); 
         this.addTransform(ROLE_REASSIGN_MACRO); 
         disableTransitions(this.pipeline.pipeline.node.defaultChild as CfnPipeline, 
-            [makeDeploymentStageName(Accounts.ACCEPTANCE)], 'Avoid manual approval expiration after one week');
+            this.stagesWithtransitionsToDisable, 'Avoid manual approval expiration after one week');
 
         Tags.of(this.pipeline.pipeline).add(STACK_NAME_TAG, props.containedStackName);
         Tags.of(this.pipeline.pipeline).add(STACK_VERSION_TAG, props.containedStackVersion);
