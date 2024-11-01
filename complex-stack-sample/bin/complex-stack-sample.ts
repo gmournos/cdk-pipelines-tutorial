@@ -17,6 +17,7 @@ if (inPipelines === 'true') {
     new PipelineStack(app, INNER_PIPELINE_STACK_TEMPLATE_NAME, {
         containedStackName,
         containedStackVersion: containedStackVersion,
+        containedStackClass: ComplexStackSampleStack,
         containedStackProps: {
             description: versionedDescription,
         },

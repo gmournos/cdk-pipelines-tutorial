@@ -1,7 +1,6 @@
 import { Construct } from 'constructs';
 import { StackProps, Stack, Stage, Fn, Tags } from 'aws-cdk-lib';
 import { CodeBuildStep, CodeBuildStepProps, CodePipeline, CodePipelineSource, ManualApprovalStep } from 'aws-cdk-lib/pipelines';
-import { ComplexStackSampleStack } from './complex-stack-sample-stack';
 import { Accounts, CHANGESET_RENAME_MACRO, COMMON_REPO, DEPLOYER_STACK_NAME_TAG, DOMAIN_NAME, getReadableAccountName, INNER_PIPELINE_INPUT_FOLDER, makeVersionedPipelineName, ROLE_REASSIGN_MACRO, STACK_DEPLOYED_AT_TAG, STACK_NAME_TAG, STACK_VERSION_TAG } from './model';
 import { Bucket } from 'aws-cdk-lib/aws-s3';
 import { StackExports } from './model';
@@ -42,34 +41,37 @@ export const hasPostmanBuildSpec = () => {
     return fileExists(BUILD_SPEC_POSTMAN_DEF_FILE);
 };
 
-export interface PipelineStackProps extends StackProps {
-    containedStackProps: StackProps;
+export type ContainedStackClassConstructor<P extends StackProps = StackProps> = new(c: Construct, id: string, p: P) => Stack;
+
+export interface PipelineStackProps <P extends StackProps = StackProps> extends StackProps {
+    containedStackProps?: StackProps;
     containedStackName: string;
     containedStackVersion: string;
+    containedStackClass: ContainedStackClassConstructor<P>,
 }
 
-export class PipelineStack extends Stack {
+export class PipelineStack<P extends StackProps = StackProps> extends Stack {
     protected readonly pipeline: CodePipeline;
     protected readonly codeSource: CodePipelineSource;
     protected readonly stagesWithtransitionsToDisable: string[] = []; 
 
-    public createDeploymentStage(targetAccount: string, requiresApproval: boolean, shouldSmokeTest: boolean, pipelineStackProps: PipelineStackProps) {
+    public createDeploymentStage(targetAccount: string, requiresApproval: boolean, shouldSmokeTest: boolean, pipelineStackProps: PipelineStackProps<P>) {
 
         class DeploymentStage extends Stage {
             readonly containedStack: Stack;
 
-            constructor(scope: Construct, targetAccount: string, pipelineStackProps: PipelineStackProps) {
+            constructor(scope: Construct, targetAccount: string, pipelineStackProps: PipelineStackProps<P>) {
                 super(scope, `${pipelineStackProps.containedStackName}-pipeline-deployment-${targetAccount}`, {
                     stageName: makeDeploymentStageName(targetAccount),
                 });
-                this.containedStack = new ComplexStackSampleStack(this, 'artifacts-stack', {
+                this.containedStack = new pipelineStackProps.containedStackClass(this, 'artifacts-stack', {
                     ...pipelineStackProps.containedStackProps,
                     stackName: pipelineStackProps.containedStackName,
                     env: { 
                         account: targetAccount,
-                        region: this.region
+                        region: this.region,
                     }, 
-                });
+                } as P);
                 Tags.of(this.containedStack).add(STACK_VERSION_TAG, pipelineStackProps.containedStackVersion);
                 Tags.of(this.containedStack).add(STACK_DEPLOYED_AT_TAG, (new Date()).toISOString());
             }
@@ -92,7 +94,7 @@ export class PipelineStack extends Stack {
         }
     }
 
-    protected makeManualApprovalStep(targetAccount: string, pipelineStackProps: PipelineStackProps) {
+    protected makeManualApprovalStep(targetAccount: string, pipelineStackProps: PipelineStackProps<P>) {
         const accountName = getReadableAccountName(targetAccount);
 
         return new ManualApprovalStep(`${pipelineStackProps.containedStackName}-${pipelineStackProps.containedStackVersion}-approval-promote-to-${accountName}`, {
