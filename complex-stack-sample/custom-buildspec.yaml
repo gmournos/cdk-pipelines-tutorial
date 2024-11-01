@@ -1,0 +1,10 @@
+build-image: STANDARD_5_0
+phases:
+  build:
+    commands:
+      - echo "inside the custom build"
+      - node --version
+      - npm ci
+      - npm run build
+      - npx aws-cdk synth -c pipeline=true
+
