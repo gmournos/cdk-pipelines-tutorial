@@ -17,8 +17,9 @@ const makeDeploymentStageName = (accountValue: string) => {
     return `${getReadableAccountName(accountValue)}-deployment`;
 };
 
-const BULID_SPEC_DEF_FILE = 'custom-buildspec.yaml';
+const BUILD_SPEC_DEF_FILE = 'custom-buildspec.yaml';
 const POSTMAN_SPEC_DEF_FILE = 'postman.json';
+const BUILD_SPEC_POSTMAN_DEF_FILE = 'custom-buildspec-apitests.yaml';
 
 export const fileExists = (filename: string) => {
     try {
@@ -30,11 +31,15 @@ export const fileExists = (filename: string) => {
 };
 
 export const hasBuildSpec = () => {
-    return fileExists(BULID_SPEC_DEF_FILE);
+    return fileExists(BUILD_SPEC_DEF_FILE);
 };
 
 export const hasPostmanSpec = () => {
     return fileExists(POSTMAN_SPEC_DEF_FILE);
+};
+
+export const hasPostmanBuildSpec = () => {
+    return fileExists(BUILD_SPEC_POSTMAN_DEF_FILE);
 };
 
 class DeploymentStage extends Stage {
@@ -127,8 +132,8 @@ export class PipelineStack extends Stack {
     
     protected makeMainBuildStep(codeSource: CodePipelineSource) {
         const defaultBuildSpecProps = this.makeMainBuildStepDefaultBuildspec(codeSource);
-
-        const buildSpecProps = hasBuildSpec() ? this.overrideBuildSpecPropsFromBuildspecYamlFile(defaultBuildSpecProps, BULID_SPEC_DEF_FILE) : defaultBuildSpecProps;
+        
+        const buildSpecProps = hasBuildSpec() ? this.overrideBuildSpecPropsFromBuildspecYamlFile(defaultBuildSpecProps, BUILD_SPEC_DEF_FILE) : defaultBuildSpecProps;
 
         return new CodeBuildStep('synth-step', buildSpecProps);
     }
@@ -160,8 +165,10 @@ export class PipelineStack extends Stack {
     protected makePostmanCodeBuild(account: string, codeSource: CodePipelineSource) {
         
         const defaultBuildSpecProps: CodeBuildStepProps = this.makePostmanCodeBuildDefaultBuildspec(account, codeSource);
+        const buildSpecProps = hasPostmanBuildSpec() ? this.overrideBuildSpecPropsFromBuildspecYamlFile(defaultBuildSpecProps,
+            BUILD_SPEC_POSTMAN_DEF_FILE) : defaultBuildSpecProps;
 
-        return new CodeBuildStep(`test-run-postman-${account}`, defaultBuildSpecProps);
+        return new CodeBuildStep(`test-run-postman-${account}`, buildSpecProps);
     }
 
     protected makePostmanCodeBuildDefaultBuildspec(account: string, codeSource: CodePipelineSource) {
