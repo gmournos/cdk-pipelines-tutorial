@@ -10,7 +10,7 @@ import { Key } from 'aws-cdk-lib/aws-kms';
 import { CfnPipeline } from 'aws-cdk-lib/aws-codepipeline';
 import * as fs from 'fs';
 import * as yaml from 'js-yaml';
-import { BuildSpec, LinuxBuildImage } from 'aws-cdk-lib/aws-codebuild';
+import { BuildSpec, LinuxBuildImage, ReportGroupType } from 'aws-cdk-lib/aws-codebuild';
 
 
 const makeDeploymentStageName = (accountValue: string) => {
@@ -18,6 +18,7 @@ const makeDeploymentStageName = (accountValue: string) => {
 };
 
 const BULID_SPEC_DEF_FILE = 'custom-buildspec.yaml';
+const POSTMAN_SPEC_DEF_FILE = 'postman.json';
 
 export const fileExists = (filename: string) => {
     try {
@@ -28,9 +29,12 @@ export const fileExists = (filename: string) => {
     }
 };
 
-
 export const hasBuildSpec = () => {
     return fileExists(BULID_SPEC_DEF_FILE);
+};
+
+export const hasPostmanSpec = () => {
+    return fileExists(POSTMAN_SPEC_DEF_FILE);
 };
 
 class DeploymentStage extends Stage {
@@ -82,7 +86,10 @@ export class PipelineStack extends Stack {
         });
 
         // Add a deployment stage to TEST
-        pipeline.addStage(new DeploymentStage(this, Accounts.TEST, props));
+        const testStage = pipeline.addStage(new DeploymentStage(this, Accounts.TEST, props));
+        if (hasPostmanSpec()) {
+            testStage.addPost(this.makePostmanCodeBuild(Accounts.TEST, codeSource));
+        }
 
         // Add a deployment stage to ACCEPTANCE
 
@@ -104,7 +111,7 @@ export class PipelineStack extends Stack {
             }],
         };
         pipeline.addStage(deployToAcceptanceStage, approvalAcceptance);
-
+        
         pipeline.buildPipeline();
 
         this.addTransform(CHANGESET_RENAME_MACRO); 
@@ -148,6 +155,47 @@ export class PipelineStack extends Stack {
                 PRODUCTION_ACCOUNT: process.env.PRODUCTION_ACCOUNT!,
             },
         };
+    }
+
+    protected makePostmanCodeBuild(account: string, codeSource: CodePipelineSource) {
+        
+        const defaultBuildSpecProps: CodeBuildStepProps = this.makePostmanCodeBuildDefaultBuildspec(account, codeSource);
+
+        return new CodeBuildStep(`test-run-postman-${account}`, defaultBuildSpecProps);
+    }
+
+    protected makePostmanCodeBuildDefaultBuildspec(account: string, codeSource: CodePipelineSource) {
+
+        const accountName = getReadableAccountName(account);
+
+        const testReportsArn = Fn.importValue(StackExports.POSTMAN_REPORT_GROUP_ARN_REF);
+
+        const defaultBuildSpecProps: CodeBuildStepProps = {
+            buildEnvironment: {
+                buildImage: LinuxBuildImage.STANDARD_7_0,
+            },
+            input: codeSource,
+            installCommands: [
+                `aws codeartifact login --tool npm --repository ${COMMON_REPO} --domain ${DOMAIN_NAME} --domain-owner ${Accounts.DEVOPS}`,
+                'npm install -g newman',
+            ],
+            commands: [
+                `echo "Running API tests at ${accountName}"`,
+                `newman run -r junit ${POSTMAN_SPEC_DEF_FILE}`,
+            ],
+            partialBuildSpec: BuildSpec.fromObject({
+
+                reports: {
+                    [testReportsArn]: {
+                        files: ['**/*'],
+                        'base-directory': 'newman',
+                        'discard-paths': true,
+                        type: ReportGroupType.TEST,
+                    },
+                },
+            }),
+        };
+        return defaultBuildSpecProps;
     }
 
     
