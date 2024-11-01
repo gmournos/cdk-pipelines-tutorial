@@ -1,6 +1,6 @@
 import { Construct } from 'constructs';
 import { StackProps, Stack, Stage, Fn, Tags } from 'aws-cdk-lib';
-import { CodeBuildStep, CodePipeline, CodePipelineSource, ManualApprovalStep } from 'aws-cdk-lib/pipelines';
+import { CodeBuildStep, CodeBuildStepProps, CodePipeline, CodePipelineSource, ManualApprovalStep } from 'aws-cdk-lib/pipelines';
 import { ComplexStackSampleStack } from './complex-stack-sample-stack';
 import { Accounts, CHANGESET_RENAME_MACRO, COMMON_REPO, DEPLOYER_STACK_NAME_TAG, DOMAIN_NAME, getReadableAccountName, INNER_PIPELINE_INPUT_FOLDER, makeVersionedPipelineName, ROLE_REASSIGN_MACRO, STACK_DEPLOYED_AT_TAG, STACK_NAME_TAG, STACK_VERSION_TAG } from './model';
 import { Bucket } from 'aws-cdk-lib/aws-s3';
@@ -8,6 +8,10 @@ import { StackExports } from './model';
 import { S3Trigger } from 'aws-cdk-lib/aws-codepipeline-actions';
 import { Key } from 'aws-cdk-lib/aws-kms';
 import { CfnPipeline } from 'aws-cdk-lib/aws-codepipeline';
+import * as fs from 'fs';
+import * as yaml from 'js-yaml';
+import { BuildSpec, LinuxBuildImage } from 'aws-cdk-lib/aws-codebuild';
+
 
 const makeDeploymentStageName = (accountValue: string) => {
     return `${getReadableAccountName(accountValue)}-deployment`;
@@ -110,6 +114,39 @@ export class PipelineStack extends Stack {
         Tags.of(pipeline.pipeline).add(STACK_VERSION_TAG, props.containedStackVersion);
         Tags.of(pipeline.pipeline).add(DEPLOYER_STACK_NAME_TAG, this.stackName);
     }
+
+    
+    protected overrideBuildSpecPropsFromBuildspecYamlFile(defaultBuildSpecProps: CodeBuildStepProps, buildspecFilename: string) {
+        const overridingObject = yaml.load(fs.readFileSync(buildspecFilename, 'utf8')) as Record<string, any>;
+
+        const buildSpecProps = { ...defaultBuildSpecProps } as any;
+
+        const installCommands = overridingObject.phases?.install?.commands;
+        if (installCommands) {
+            buildSpecProps.installCommands = installCommands;
+            delete overridingObject.phases.install.commands;
+        }
+        const buildCommands = overridingObject.phases?.build?.commands;
+        if (buildCommands) {
+            buildSpecProps.commands = buildCommands;
+            delete overridingObject.phases?.build.commands;
+        }
+
+        const baseDirectory = overridingObject.artifacts?.['base-directory'];
+        if (baseDirectory) {
+            buildSpecProps.baseDirectory = baseDirectory;
+            delete overridingObject.artifacts['base-directory'];
+        }
+
+        const buildImage = overridingObject['build-image'] as string;
+        if (buildImage && LinuxBuildImage[buildImage as keyof typeof LinuxBuildImage]) {
+            buildSpecProps.buildEnvironment.buildImage = LinuxBuildImage[buildImage as keyof typeof LinuxBuildImage];
+        }
+
+        buildSpecProps.partialBuildSpec = BuildSpec.fromObject(overridingObject);
+        return buildSpecProps;
+    }
+
 }
 
 const disableTransitions = (pipeline: CfnPipeline, stageNames: string[], disableReason: string) => {
