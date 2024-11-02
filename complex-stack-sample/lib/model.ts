@@ -82,9 +82,8 @@ export const getReadableAccountName = (accountValue: string) => {
     }
 };
 
-export type OmitProperties<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>;
-export type PartialStackProps<T extends StackProps> = undefined | OmitProperties<T, 'stackName' | 'env' | 'description' >;
-export type ContainedStackClassConstructor<P extends StackProps = StackProps> = new(c: Construct, id: string, p: P) => Stack;
-
-
-
+interface EnvironmentAware {
+    environmentName?: string;
+}
+export type ContainedStackPropsType = StackProps & Partial<EnvironmentAware>;
+export type ContainedStackClassConstructor<P extends ContainedStackPropsType = StackProps> = new(c: Construct, id: string, p: P) => Stack;

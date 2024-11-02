@@ -1,7 +1,7 @@
 import { Construct } from 'constructs';
 import { StackProps, Stack, Stage, Fn, Tags } from 'aws-cdk-lib';
 import { CodeBuildStep, CodeBuildStepProps, CodePipeline, CodePipelineSource, ManualApprovalStep } from 'aws-cdk-lib/pipelines';
-import { ContainedStackClassConstructor, getReadableAccountName, 
+import { ContainedStackClassConstructor, ContainedStackPropsType, getReadableAccountName, 
     INNER_PIPELINE_INPUT_FOLDER, makeVersionedPipelineName, PIPELINES_BUILD_SPEC_DEF_FILE, 
     PIPELINES_BUILD_SPEC_POSTMAN_DEF_FILE, PIPELINES_POSTMAN_SPEC_DEF_FILE, 
     STACK_DEPLOYED_AT_TAG, STACK_VERSION_TAG } from './model';
@@ -38,14 +38,14 @@ export const hasPostmanBuildSpec = () => {
     return fileExists(PIPELINES_BUILD_SPEC_POSTMAN_DEF_FILE);
 };
 
-export interface InnerPipelineConstructProps <P extends StackProps = StackProps> {
-    containedStackProps?: StackProps;
+export interface InnerPipelineConstructProps <P extends ContainedStackPropsType = StackProps> {
+    containedStackProps?: P;
     containedStackName: string;
     containedStackVersion: string;
     containedStackClass: ContainedStackClassConstructor<P>,
 }
 
-export class InnerPipelineConstruct<P extends StackProps = StackProps> extends Construct {
+export class InnerPipelineConstruct<P extends ContainedStackPropsType = StackProps> extends Construct {
     readonly pipeline: CodePipeline;
     protected readonly codeSource: CodePipelineSource;
     readonly stagesWithtransitionsToDisable: string[] = []; 
@@ -65,7 +65,8 @@ export class InnerPipelineConstruct<P extends StackProps = StackProps> extends C
                     env: { 
                         account: targetAccount,
                         region: this.region,
-                    }, 
+                    },
+                    environmentName: getReadableAccountName(targetAccount), 
                 } as P);
                 Tags.of(this.containedStack).add(STACK_VERSION_TAG, pipelineStackProps.containedStackVersion);
                 Tags.of(this.containedStack).add(STACK_DEPLOYED_AT_TAG, (new Date()).toISOString());

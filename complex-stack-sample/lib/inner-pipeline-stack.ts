@@ -1,15 +1,15 @@
 
 import { StackProps } from "aws-cdk-lib";
 import * as cdk from 'aws-cdk-lib';
-import { Accounts, CHANGESET_RENAME_MACRO, DEPLOYER_STACK_NAME_TAG, 
+import { Accounts, CHANGESET_RENAME_MACRO, ContainedStackPropsType, DEPLOYER_STACK_NAME_TAG, 
     ROLE_REASSIGN_MACRO, STACK_NAME_TAG, STACK_VERSION_TAG } from "./model";
 import { InnerPipelineConstruct, InnerPipelineConstructProps } from "./inner-pipeline-construct";
 import { CfnPipeline } from "aws-cdk-lib/aws-codepipeline";
 import { Construct } from "constructs";
 
-interface InnerPipelineStackProps<P extends StackProps = StackProps> extends StackProps, InnerPipelineConstructProps<P> {} 
+interface InnerPipelineStackProps<P extends ContainedStackPropsType = StackProps> extends StackProps, InnerPipelineConstructProps<P> {} 
 
-export class InnerPipelineStack<P extends StackProps = StackProps> extends cdk.Stack {
+export class InnerPipelineStack<P extends ContainedStackPropsType = StackProps> extends cdk.Stack {
             
     constructor(scope: Construct, id: string, props: InnerPipelineStackProps<P>) {
         super(scope, id, props);    

@@ -1,11 +1,11 @@
 import { StackProps } from "aws-cdk-lib";
 import * as cdk from 'aws-cdk-lib';
-import { ContainedStackClassConstructor, INNER_PIPELINE_STACK_TEMPLATE_NAME, 
-    makeVersionedPipelineStackName, PartialStackProps } from "./model";
+import { ContainedStackClassConstructor, ContainedStackPropsType, INNER_PIPELINE_STACK_TEMPLATE_NAME, 
+    makeVersionedPipelineStackName } from "./model";
 import { InnerPipelineStack } from "./inner-pipeline-stack";
 
-export class InnerPipelineStackFactory<P extends StackProps = StackProps> {
-    buildInnerPipelineStackBase(parentScope: cdk.App, containedStackClass: ContainedStackClassConstructor<P>, extraContainedStackProps?: PartialStackProps<StackProps>) {
+export class InnerPipelineStackFactory<P extends ContainedStackPropsType = StackProps> {
+    buildInnerPipelineStackBase(parentScope: cdk.App, containedStackClass: ContainedStackClassConstructor<P>, extraContainedStackProps?: Record<string, any>) {
         const containedStackVersion = parentScope.node.tryGetContext('version');
         const containedStackName = parentScope.node.tryGetContext('stackName');
         const containedStackDescription = parentScope.node.tryGetContext('description');
@@ -17,7 +17,7 @@ export class InnerPipelineStackFactory<P extends StackProps = StackProps> {
             containedStackProps: {
                 ...extraContainedStackProps,
                 description: versionedDescription,
-            },
+            } as P,
         };
         new InnerPipelineStack(parentScope, INNER_PIPELINE_STACK_TEMPLATE_NAME, {
             ...innerPipelineConstructProps,
