@@ -1,0 +1,19 @@
+phases:
+  build:
+    commands:
+      - mkdir -p cdk.out
+      - cd ui
+      - npm ci
+      - npm run build -- --configuration=test
+      - mv dist ../ui-dist-test
+      - npm run build -- --configuration=acceptance
+      - mv dist ../ui-dist-acceptance
+      - npm run build -- --configuration=test
+      - mv dist ../ui-dist-production
+      - cd ..
+      - find ui-dist-production
+      - pwd            
+      - npm ci
+      - npm run build
+      - npx aws-cdk synth -c pipeline=true
+
