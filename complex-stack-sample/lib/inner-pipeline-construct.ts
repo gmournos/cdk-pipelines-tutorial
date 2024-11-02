@@ -1,7 +1,7 @@
 import { Construct } from 'constructs';
 import { StackProps, Stack, Stage, Fn, Tags } from 'aws-cdk-lib';
 import { CodeBuildStep, CodeBuildStepProps, CodePipeline, CodePipelineSource, ManualApprovalStep } from 'aws-cdk-lib/pipelines';
-import { ContainedStackClassConstructor, ContainedStackPropsType, getReadableAccountName, 
+import { getReadableAccountName, 
     INNER_PIPELINE_INPUT_FOLDER, makeVersionedPipelineName, PIPELINES_BUILD_SPEC_DEF_FILE, 
     PIPELINES_BUILD_SPEC_POSTMAN_DEF_FILE, PIPELINES_POSTMAN_SPEC_DEF_FILE, 
     STACK_DEPLOYED_AT_TAG, STACK_VERSION_TAG } from './model';
@@ -11,6 +11,12 @@ import { S3Trigger } from 'aws-cdk-lib/aws-codepipeline-actions';
 import { Key } from 'aws-cdk-lib/aws-kms';
 import * as fs from 'fs';
 import { makeMainBuildStepDefaultBuildspec, makePostmanCodeBuildDefaultBuildspec, overrideBuildSpecPropsFromBuildspecYamlFile } from './inner-pipeline-util';
+
+interface EnvironmentAware {
+    environmentName?: string;
+}
+export type ContainedStackPropsType = StackProps & Partial<EnvironmentAware>;
+export type ContainedStackClassConstructor<P extends ContainedStackPropsType = StackProps> = new(c: Construct, id: string, p: P) => Stack;
 
 
 const makeDeploymentStageName = (accountValue: string) => {

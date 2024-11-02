@@ -1,6 +1,3 @@
-import { Stack, StackProps } from "aws-cdk-lib";
-import { Construct } from "constructs";
-
 export const Accounts = {
     DEVOPS: process.env.DEVOPS_ACCOUNT || 'default-devops-account',
     DEVELOPMENT: process.env.DEVELOPMENT_ACCOUNT || 'default-development-account',
@@ -81,9 +78,3 @@ export const getReadableAccountName = (accountValue: string) => {
         throw new Error('Account not found');
     }
 };
-
-interface EnvironmentAware {
-    environmentName?: string;
-}
-export type ContainedStackPropsType = StackProps & Partial<EnvironmentAware>;
-export type ContainedStackClassConstructor<P extends ContainedStackPropsType = StackProps> = new(c: Construct, id: string, p: P) => Stack;
