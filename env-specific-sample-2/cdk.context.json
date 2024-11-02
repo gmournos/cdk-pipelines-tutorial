@@ -1,0 +1,7 @@
+{
+    "version": "1.0.15",
+    "stackName": "DynamicEnvSpecificSampleStack",
+    "description": "Sample Stack with env specific assets",
+    "selfMutation": "true" 
+}
+  
