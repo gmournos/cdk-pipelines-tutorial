@@ -120,8 +120,14 @@ export class InnerPipelineConstruct<P extends StackProps = StackProps> extends C
             artifactBucket,
             pipelineName: makeVersionedPipelineName(props.containedStackName, props.containedStackVersion),
             // Define the synthesis step
-            synth: this.makeMainBuildStep(this.codeSource), 
+            synth: this.makeMainBuildStep(this.codeSource),
+            selfMutation: this.needsSelfMutation(scope), 
         });
+    }
+
+    protected needsSelfMutation(scope: Construct) {
+        const mutationFromContext = scope.node.tryGetContext("selfMutation");
+        return  mutationFromContext === 'true';
     }
     
     protected makeMainBuildStep(codeSource: CodePipelineSource) {
