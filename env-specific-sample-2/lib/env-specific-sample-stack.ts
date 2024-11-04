@@ -4,9 +4,14 @@ import { BlockPublicAccess, Bucket } from 'aws-cdk-lib/aws-s3';
 import { BucketDeployment, Source } from 'aws-cdk-lib/aws-s3-deployment';
 import { Construct } from 'constructs';
 import * as path from 'path';
+import fs from 'fs';
+
+export interface EnvSpecificSampleStackProps extends cdk.StackProps {
+    environmentName: string;
+}
 
 export class DynamicEnvSpecificSampleStack extends cdk.Stack {
-    constructor(scope: Construct, id: string, props: cdk.StackProps) {
+    constructor(scope: Construct, id: string, props: EnvSpecificSampleStackProps ) {
         super(scope, id, props);
         
         // Create an S3 bucket with all public access blocks disabled
@@ -27,8 +32,11 @@ export class DynamicEnvSpecificSampleStack extends cdk.Stack {
                 principals: [new AnyPrincipal()], // Allows public access to all objects in the bucket
             }),
         );
+        const assetsPath = [`ui-dist-${props.environmentName}`, 'env-specific-app', 'browser'];
         new BucketDeployment(this, 'deploy-webapp', {
-            sources: [Source.asset(path.join('ui', 'dist'))],
+            sources: [
+                Source.asset(path.join( ...assetsPath )),
+            ],
             destinationBucket: publicBucket,
         });
 
