@@ -1,4 +1,4 @@
-import { PipelineRoles } from '../../../lib/model';
+import { PipelineRoles } from '@uniform-pipelines/model';
 
 const SOURCE_STAGE = 'Source';
 const BUILD_STAGE = 'Build';

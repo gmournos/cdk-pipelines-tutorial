@@ -3,7 +3,7 @@ import { CfnMacro, Duration } from 'aws-cdk-lib';
 import { join } from 'path';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { Runtime } from 'aws-cdk-lib/aws-lambda';
-import { Accounts, CHANGESET_RENAME_MACRO, ROLE_REASSIGN_MACRO } from './model';
+import { Accounts, CHANGESET_RENAME_MACRO, ROLE_REASSIGN_MACRO } from '@uniform-pipelines/model';
 import { ManagedPolicy, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 
 export class PipelineMacrosConstruct extends Construct {

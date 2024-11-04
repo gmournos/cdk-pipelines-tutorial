@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import * as cdk from 'aws-cdk-lib';
 import { ComplexStackSampleStack } from '../lib/complex-stack-sample-stack';
-import { InnerPipelineStackFactory } from '../lib/inner-pipeline-stack-factory';
+import { InnerPipelineStackFactory } from '@uniform-pipelines/factory';
 
 const app = new cdk.App();
 

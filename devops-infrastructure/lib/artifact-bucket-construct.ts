@@ -1,6 +1,6 @@
 import { BlockPublicAccess, Bucket, BucketEncryption, IBucket } from "aws-cdk-lib/aws-s3";
 import { Construct } from "constructs";
-import { ARTIFACT_BUCKET_NAME, ARTIFACT_BUCKET_KEY_NAME, Accounts, StackExports } from "./model";
+import { ARTIFACT_BUCKET_NAME, ARTIFACT_BUCKET_KEY_NAME, Accounts, StackExports } from "@uniform-pipelines/model";
 import { CfnOutput, DefaultStackSynthesizer, RemovalPolicy, Stack } from "aws-cdk-lib";
 import { Key } from "aws-cdk-lib/aws-kms";
 import { AccountPrincipal, ArnPrincipal, Effect, PolicyStatement } from "aws-cdk-lib/aws-iam";

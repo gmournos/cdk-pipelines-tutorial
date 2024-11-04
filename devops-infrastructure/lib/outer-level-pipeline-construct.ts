@@ -3,7 +3,8 @@ import * as cpactions from 'aws-cdk-lib/aws-codepipeline-actions';
 import * as codebuild from 'aws-cdk-lib/aws-codebuild';
 import { Artifact } from 'aws-cdk-lib/aws-codepipeline';
 import { Construct } from 'constructs';
-import { Accounts, COMMON_REPO, DOMAIN_NAME, INNER_PIPELINE_INPUT_FOLDER, INNER_PIPELINE_STACK_TEMPLATE_NAME, makeVersionedPipelineStackName, OUTER_PIPELINE_NAME, SOURCE_CODE_KEY } from './model';
+import { Accounts, COMMON_REPO, DOMAIN_NAME, INNER_PIPELINE_INPUT_FOLDER, INNER_PIPELINE_STACK_TEMPLATE_NAME, 
+    makeVersionedPipelineStackName, OUTER_PIPELINE_NAME, SOURCE_CODE_KEY } from '@uniform-pipelines/model';
 import { IRole } from 'aws-cdk-lib/aws-iam';
 import { Bucket } from 'aws-cdk-lib/aws-s3';
 import { Key } from 'aws-cdk-lib/aws-kms';

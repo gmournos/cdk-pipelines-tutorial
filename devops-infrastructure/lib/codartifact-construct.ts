@@ -1,6 +1,6 @@
 import { Construct } from 'constructs';
 import * as codeartifact from 'aws-cdk-lib/aws-codeartifact';
-import { COMMON_REPO, DOMAIN_NAME, NPM_REPO, Accounts } from './model';
+import { COMMON_REPO, DOMAIN_NAME, NPM_REPO, Accounts } from '@uniform-pipelines/model';
 
 export class CodeArtifactCdkConstruct extends Construct {
     constructor(scope: Construct, id: string) {

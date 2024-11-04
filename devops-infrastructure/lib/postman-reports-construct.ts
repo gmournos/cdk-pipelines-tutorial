@@ -2,7 +2,7 @@ import { CfnOutput } from 'aws-cdk-lib';
 import { IBucket } from 'aws-cdk-lib/aws-s3';
 import { Construct } from 'constructs';
 import { ReportGroup } from 'aws-cdk-lib/aws-codebuild';
-import { POSTMAN_REPORT_GROUP, StackExports } from './model';
+import { POSTMAN_REPORT_GROUP, StackExports } from '@uniform-pipelines/model';
 
 interface PostmanReportsConstructProps {
     artifactBucket: IBucket;

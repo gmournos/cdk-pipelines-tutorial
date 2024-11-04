@@ -19,7 +19,7 @@ import {
     PipelineRoles,
     SOURCE_CODE_KEY,
     StackExports,
-} from './model';
+} from '@uniform-pipelines/model';
 
 import { TargetRegions } from '@uniform-pipelines/model';
 
