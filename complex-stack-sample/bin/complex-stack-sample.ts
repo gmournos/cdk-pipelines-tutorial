@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 import * as cdk from 'aws-cdk-lib';
 import { ComplexStackSampleStack } from '../lib/complex-stack-sample-stack';
-import { PipelineStack } from '../lib/pipeline-construct';
-import { INNER_PIPELINE_STACK_TEMPLATE_NAME, makeVersionedPipelineStackName } from '../lib/model';
+import { InnerPipelineStackFactory } from '../lib/inner-pipeline-stack-factory';
 
 const app = new cdk.App();
 
@@ -14,18 +13,10 @@ const containedStackName = app.node.tryGetContext('stackName');
 const versionedDescription = `${containedStackName}:${containedStackVersion}: ${containedStackDescription}`;
 
 if (inPipelines === 'true') {
-    new PipelineStack(app, INNER_PIPELINE_STACK_TEMPLATE_NAME, {
-        containedStackName,
-        containedStackVersion: containedStackVersion,
-        containedStackClass: ComplexStackSampleStack,
-        containedStackProps: {
-            description: versionedDescription,
-        },
-        description: 'Pipeline stack to deploy Feature2',
-        stackName: makeVersionedPipelineStackName(containedStackName, containedStackVersion),
-    });
+    new InnerPipelineStackFactory().buildInnerPipelineStackBase(app, ComplexStackSampleStack);
 } else {
     new ComplexStackSampleStack(app, 'ComplexStackSampleStack', {
-        description: containedStackDescription,
+        description: versionedDescription,
+        stackName: containedStackName,
     });
 }

@@ -1,15 +1,14 @@
 import { Construct } from 'constructs';
 import { StackProps, Stack, Stage, Fn, Tags } from 'aws-cdk-lib';
 import { CodeBuildStep, CodeBuildStepProps, CodePipeline, CodePipelineSource, ManualApprovalStep } from 'aws-cdk-lib/pipelines';
-import { Accounts, CHANGESET_RENAME_MACRO, DEPLOYER_STACK_NAME_TAG, getReadableAccountName, 
+import { ContainedStackClassConstructor, getReadableAccountName, 
     INNER_PIPELINE_INPUT_FOLDER, makeVersionedPipelineName, PIPELINES_BUILD_SPEC_DEF_FILE, 
-    PIPELINES_BUILD_SPEC_POSTMAN_DEF_FILE, PIPELINES_POSTMAN_SPEC_DEF_FILE, ROLE_REASSIGN_MACRO, 
-    STACK_DEPLOYED_AT_TAG, STACK_NAME_TAG, STACK_VERSION_TAG } from './model';
+    PIPELINES_BUILD_SPEC_POSTMAN_DEF_FILE, PIPELINES_POSTMAN_SPEC_DEF_FILE, 
+    STACK_DEPLOYED_AT_TAG, STACK_VERSION_TAG } from './model';
 import { Bucket } from 'aws-cdk-lib/aws-s3';
 import { StackExports } from './model';
 import { S3Trigger } from 'aws-cdk-lib/aws-codepipeline-actions';
 import { Key } from 'aws-cdk-lib/aws-kms';
-import { CfnPipeline } from 'aws-cdk-lib/aws-codepipeline';
 import * as fs from 'fs';
 import { makeMainBuildStepDefaultBuildspec, makePostmanCodeBuildDefaultBuildspec, overrideBuildSpecPropsFromBuildspecYamlFile } from './inner-pipeline-util';
 
@@ -39,26 +38,24 @@ export const hasPostmanBuildSpec = () => {
     return fileExists(PIPELINES_BUILD_SPEC_POSTMAN_DEF_FILE);
 };
 
-export type ContainedStackClassConstructor<P extends StackProps = StackProps> = new(c: Construct, id: string, p: P) => Stack;
-
-export interface PipelineStackProps <P extends StackProps = StackProps> extends StackProps {
+export interface InnerPipelineConstructProps <P extends StackProps = StackProps> {
     containedStackProps?: StackProps;
     containedStackName: string;
     containedStackVersion: string;
     containedStackClass: ContainedStackClassConstructor<P>,
 }
 
-export class PipelineStack<P extends StackProps = StackProps> extends Stack {
-    protected readonly pipeline: CodePipeline;
+export class InnerPipelineConstruct<P extends StackProps = StackProps> extends Construct {
+    readonly pipeline: CodePipeline;
     protected readonly codeSource: CodePipelineSource;
-    protected readonly stagesWithtransitionsToDisable: string[] = []; 
+    readonly stagesWithtransitionsToDisable: string[] = []; 
 
-    public createDeploymentStage(targetAccount: string, requiresApproval: boolean, shouldSmokeTest: boolean, pipelineStackProps: PipelineStackProps<P>) {
+    public createDeploymentStage(targetAccount: string, requiresApproval: boolean, shouldSmokeTest: boolean, pipelineStackProps: InnerPipelineConstructProps<P>) {
 
         class DeploymentStage extends Stage {
             readonly containedStack: Stack;
 
-            constructor(scope: Construct, targetAccount: string, pipelineStackProps: PipelineStackProps<P>) {
+            constructor(scope: Construct, targetAccount: string, pipelineStackProps: InnerPipelineConstructProps<P>) {
                 super(scope, `${pipelineStackProps.containedStackName}-pipeline-deployment-${targetAccount}`, {
                     stageName: makeDeploymentStageName(targetAccount),
                 });
@@ -92,7 +89,7 @@ export class PipelineStack<P extends StackProps = StackProps> extends Stack {
         }
     }
 
-    protected makeManualApprovalStep(targetAccount: string, pipelineStackProps: PipelineStackProps<P>) {
+    protected makeManualApprovalStep(targetAccount: string, pipelineStackProps: InnerPipelineConstructProps<P>) {
         const accountName = getReadableAccountName(targetAccount);
 
         return new ManualApprovalStep(`${pipelineStackProps.containedStackName}-${pipelineStackProps.containedStackVersion}-approval-promote-to-${accountName}`, {
@@ -100,8 +97,8 @@ export class PipelineStack<P extends StackProps = StackProps> extends Stack {
         });
     }
 
-    constructor(scope: Construct, id: string, props: PipelineStackProps) {
-        super(scope, id, props);
+    constructor(scope: Construct, id: string, props: InnerPipelineConstructProps<P>) {
+        super(scope, id);
 
         const encryptionKey = Key.fromKeyArn(this, 'artifact-bucket-key-arn',
             Fn.importValue(StackExports.PIPELINE_ARTIFACT_BUCKET_KEY_ARN_REF));
@@ -125,25 +122,7 @@ export class PipelineStack<P extends StackProps = StackProps> extends Stack {
             // Define the synthesis step
             synth: this.makeMainBuildStep(this.codeSource), 
         });
-        
-        // Add a deployment stage to TEST
-        this.createDeploymentStage(Accounts.TEST, false, true, props); 
-
-        // Add a deployment stage to ACCEPTANCE
-        this.createDeploymentStage(Accounts.ACCEPTANCE, true, false, props); 
-        
-        this.pipeline.buildPipeline();
-
-        this.addTransform(CHANGESET_RENAME_MACRO); 
-        this.addTransform(ROLE_REASSIGN_MACRO); 
-        disableTransitions(this.pipeline.pipeline.node.defaultChild as CfnPipeline, 
-            this.stagesWithtransitionsToDisable, 'Avoid manual approval expiration after one week');
-
-        Tags.of(this.pipeline.pipeline).add(STACK_NAME_TAG, props.containedStackName);
-        Tags.of(this.pipeline.pipeline).add(STACK_VERSION_TAG, props.containedStackVersion);
-        Tags.of(this.pipeline.pipeline).add(DEPLOYER_STACK_NAME_TAG, this.stackName);
     }
-
     
     protected makeMainBuildStep(codeSource: CodePipelineSource) {
         const defaultBuildSpecProps = makeMainBuildStepDefaultBuildspec(codeSource);
@@ -163,13 +142,3 @@ export class PipelineStack<P extends StackProps = StackProps> extends Stack {
     }
 
 }
-
-const disableTransitions = (pipeline: CfnPipeline, stageNames: string[], disableReason: string) => {
-    const disableTransitionsPropertyParams = stageNames.map(stageName => {
-        return {
-            Reason: disableReason,
-            StageName: stageName,
-        };
-    });
-    pipeline.addPropertyOverride("DisableInboundStageTransitions", disableTransitionsPropertyParams);
-};
