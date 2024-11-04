@@ -33,12 +33,24 @@ export class DynamicEnvSpecificSampleStack extends cdk.Stack {
             }),
         );
         const assetsPath = [`ui-dist-${props.environmentName}`, 'env-specific-app', 'browser'];
-        new BucketDeployment(this, 'deploy-webapp', {
-            sources: [
-                Source.asset(path.join( ...assetsPath )),
-            ],
-            destinationBucket: publicBucket,
-        });
-
+        if (folderExists(assetsPath)) {
+            new BucketDeployment(this, 'deploy-webapp', {
+                sources: [
+                    Source.asset(path.join( ...assetsPath )),
+                ],
+                destinationBucket: publicBucket,
+            });
+        }
     }
 }
+
+const folderExists = (folderPath: string[]) => {
+    try {
+        // Attempt to read the directory
+        fs.accessSync(path.join(...folderPath), fs.constants.F_OK);
+        return true;
+    } catch (err) {
+        return false;
+    }
+}
+
