@@ -1,5 +1,6 @@
 import {
     CodePipelineClient,
+    GetPipelineCommand,
     GetPipelineExecutionCommand,
     ListPipelineExecutionsCommand,
     ListPipelinesCommand,
@@ -105,3 +106,15 @@ export const getPipelineLastExecutionStatus = async (pipelineName: string): Prom
         throw error;
     }
 }
+
+// Function to get pipeline ARN by name
+export const getPipelineArn = async (pipelineName: string): Promise<string | undefined> => {
+    try {
+        const pipelineData = await withThrottlingRetry(() => client.send(new GetPipelineCommand({ name: pipelineName })));
+        return pipelineData.metadata?.pipelineArn;
+    } catch (error) {
+        console.error(`Failed to get pipeline ARN for ${pipelineName}:`, error);
+        throw error;
+    }
+}
+
