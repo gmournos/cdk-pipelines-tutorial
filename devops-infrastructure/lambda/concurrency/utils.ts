@@ -1,6 +1,6 @@
 const RETRY_DELAY_BASE = 100;
 const MAX_RETRIES = 5;
-export const withThrottlingRety = async <T>(fn: (...args: any[]) => Promise<T>, ...args: any[]): Promise<T> => {
+export const withThrottlingRetry = async <T>(fn: (...args: any[]) => Promise<T>, ...args: any[]): Promise<T> => {
     return withExponentialBackoff(MAX_RETRIES, ['ThrottlingException'], fn, ...args); // Spread args here
 };
 const withExponentialBackoff = async <T>(maxRetries: number, errorNames: string[], fn: (...args: any[]) => Promise<T>, ...args: any[]): Promise<T> => {
