@@ -14,6 +14,7 @@ interface OuterLevelPipelineStackProps {
     artifactBucketKeyArn: string;
     mainRole: IRole;
     actionsRole: IRole;
+    deploymentRole: IRole;
 }
 
 export class OuterLevelPipelineConstruct extends Construct {
@@ -102,8 +103,9 @@ export class OuterLevelPipelineConstruct extends Construct {
             actionName: 'CFN_Deploy',
             templatePath: synthOutput.atPath(templatePath),
             stackName: `${targetStackName}-${replacedTargetStackVersion}-pipeline-stack`,
-            adminPermissions: true,
+            adminPermissions: false,
             role: props.actionsRole,
+            deploymentRole: props.deploymentRole,
         });
 
         // Create the pipeline
