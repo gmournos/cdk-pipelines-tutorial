@@ -20,6 +20,7 @@
   "dependencies": {
     "@aws-sdk/client-codepipeline": "^3.682.0",
     "@tsconfig/node20": "^20.1.4",
+    "@uniform-pipelines/model": "^1.1.0",
     "aws-cdk-lib": "2.164.1",
     "constructs": "^10.4.2"
   }

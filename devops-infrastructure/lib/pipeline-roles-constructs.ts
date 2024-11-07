@@ -21,6 +21,8 @@ import {
     StackExports,
 } from './model';
 
+import { TargetRegions } from '@uniform-pipelines/model';
+
 const getKmsBucketReadPermissions = (bucketArn: string, bucketKeyArn: string) => {
     return [
         new PolicyStatement({
@@ -96,11 +98,17 @@ export class PipelinesRoleConstruct extends Construct {
 
     constructor(scope: Construct, id: string, props: PipelinesRoleConstructProps) {
         super(scope, id);
-        this.deployAccountPrincipals = [Accounts.DEVELOPMENT, Accounts.TEST, Accounts.TEST, Accounts.ACCEPTANCE, Accounts.PRODUCTION].map(
-            account => new ArnPrincipal(`arn:aws:iam::${account}:role/cdk-${DefaultStackSynthesizer.DEFAULT_QUALIFIER}-deploy-role-${account}-${Stack.of(this).region}`)
+        const targetEnvironments = [
+            { account: Accounts.TEST, region: TargetRegions.TEST },
+            { account: Accounts.ACCEPTANCE, region: TargetRegions.ACCEPTANCE },
+            { account: Accounts.PRODUCTION, region: TargetRegions.PRODUCTION },
+        ];
+
+        this.deployAccountPrincipals = targetEnvironments.map(
+            targetEnv => new ArnPrincipal(`arn:aws:iam::${targetEnv.account}:role/cdk-${DefaultStackSynthesizer.DEFAULT_QUALIFIER}-deploy-role-${targetEnv.account}-${targetEnv.region}`)
         );
-        this.filePublishingPrincipals = [Accounts.DEVELOPMENT, Accounts.TEST, Accounts.TEST, Accounts.ACCEPTANCE, Accounts.PRODUCTION].map(
-            account => new ArnPrincipal(`arn:aws:iam::${account}:role/cdk-${DefaultStackSynthesizer.DEFAULT_QUALIFIER}-file-publishing-role-${account}-${Stack.of(this).region}`)
+        this.filePublishingPrincipals = targetEnvironments.map(
+            targetEnv => new ArnPrincipal(`arn:aws:iam::${targetEnv.account}:role/cdk-${DefaultStackSynthesizer.DEFAULT_QUALIFIER}-file-publishing-role-${targetEnv.account}-${targetEnv.region}`)
         );
         
         this.codeArtifactPermissions = this.makeCodeArtifactPermissions();
