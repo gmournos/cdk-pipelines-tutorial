@@ -1,0 +1,20 @@
+{
+  "name": "@uniform-pipelines/factory",
+  "version": "1.0.6",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@uniform-pipelines/model": "^1.0.0",
+    "aws-cdk": "^2.165.0",
+    "aws-cdk-lib": "^2.165.0",
+    "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.8.6",
+    "typescript": "^5.6.3"
+  }
+}
