@@ -1,7 +1,13 @@
-import { Stack } from 'aws-cdk-lib';
+import { CfnOutput, Stack } from 'aws-cdk-lib';
 import {
+    AccountPrincipal,
+    CompositePrincipal,
     Effect,
+    IRole,
+    ManagedPolicy,
     PolicyStatement,
+    Role,
+    ServicePrincipal,
 } from 'aws-cdk-lib/aws-iam';
 import { Construct } from 'constructs';
 import {
@@ -9,9 +15,10 @@ import {
     COMMON_REPO,
     DOMAIN_NAME,
     INNER_PIPELINE_INPUT_FOLDER,
-    SOURCE_CODE_KEY
+    PipelineRoles,
+    SOURCE_CODE_KEY,
+    StackExports,
 } from './model';
-
 
 const getKmsBucketReadPermissions = (bucketArn: string, bucketKeyArn: string) => {
     return [
@@ -68,6 +75,10 @@ export class PipelinesRoleConstruct extends Construct {
     private artifactBucketWritePermissions: PolicyStatement[];
     private cloudFormationPermnissions: PolicyStatement[];
 
+    outerPipelineActionsRole: IRole;
+    outerPipelineMainRole: IRole;
+    outerPipelineDeploymentRole: IRole;
+
     constructor(scope: Construct, id: string, props: PipelinesRoleConstructProps) {
         super(scope, id);
         this.codeArtifactPermissions = this.makeCodeArtifactPermissions();
@@ -81,8 +92,75 @@ export class PipelinesRoleConstruct extends Construct {
             props.artifactBucketArn,
             props.artifactBucketKeyArn,
         );
+        this.outerPipelineActionsRole = this.makeOuterPipelineActionsRole();
+        this.outerPipelineMainRole = this.makeOuterPipelineMainRole();
+        this.outerPipelineDeploymentRole = this.makeOuterPipelineDeploymentRole();
     }
 
+    makeOuterPipelineMainRole() {
+        const outerPipelineMainRole = new Role(this, 'outer-pipeline-role', {
+            roleName: PipelineRoles.OUTER_PIPELINE_ROLE,
+            assumedBy: new CompositePrincipal(new ServicePrincipal('codepipeline.amazonaws.com')),
+        });
+
+        const assumeRolesPermission = new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: ['sts:AssumeRole'],
+            resources: [this.outerPipelineActionsRole.roleArn],
+        });
+
+        outerPipelineMainRole.addToPolicy(assumeRolesPermission);
+
+        new CfnOutput(this, 'outer-pipeline-main-role-arn-export', {
+            description: 'Arn of the main role of outer Pipelines',
+            value: outerPipelineMainRole.roleArn,
+            exportName: StackExports.OUTER_PIPELINE_MAIN_ROLE_ARN_REF,
+        });
+        return outerPipelineMainRole;
+    }
+
+    makeOuterPipelineActionsRole() {
+        const outerPipelineActionsRole = new Role(this, 'outer-pipeline-actions-role', {
+            roleName: PipelineRoles.OUTER_PIPELINE_ACTIONS_ROLE,
+            assumedBy: new CompositePrincipal(
+                new AccountPrincipal(Stack.of(this).account),
+                new ServicePrincipal('codebuild.amazonaws.com'),
+            ),
+        });
+
+        [
+            ...this.codeArtifactPermissions,
+            ...this.cloudwatchPermissions,
+            ...this.codeBuildPermissions,
+            ...this.readSourceBucketPermissions,
+            ...this.writeSourceBucketPermissions,
+            ...this.artifactBucketWritePermissions,
+            ...this.cloudFormationPermnissions,
+        ].forEach(permission => outerPipelineActionsRole.addToPolicy(permission));
+
+        new CfnOutput(this, 'outer-pipeline-actions-role-arn-export', {
+            description: 'Arn of the actions role of outer Pipelines',
+            value: outerPipelineActionsRole.roleArn,
+            exportName: StackExports.OUTER_PIPELINE_ACTIONS_ROLE_ARN_REF,
+        });
+        return outerPipelineActionsRole;
+    }
+
+    makeOuterPipelineDeploymentRole() {
+        const outerPipelineDeploymentRole = new Role(this, 'outer-pipeline-deployment-role', {
+            roleName: PipelineRoles.OUTER_PIPELINE_DEPLOYMENT_ROLE,
+            assumedBy: new CompositePrincipal(new ServicePrincipal('cloudformation.amazonaws.com')),
+        });
+        const adminAccess = ManagedPolicy.fromAwsManagedPolicyName('AdministratorAccess');
+        outerPipelineDeploymentRole.addManagedPolicy(adminAccess);
+
+        new CfnOutput(this, 'outer-pipeline-deployment-role-arn-export', {
+            description: 'Arn of the deployment role of outer Pipelines',
+            value: outerPipelineDeploymentRole.roleArn,
+            exportName: StackExports.OUTER_PIPELINE_DEPLOYMENT_ROLE_ARN_REF,
+        });
+        return outerPipelineDeploymentRole;
+    }
 
     makeCloudFormationPermissions() {
         return [
