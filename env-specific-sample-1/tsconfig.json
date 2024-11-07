@@ -1,0 +1,12 @@
+{
+  "extends": "@tsconfig/node20/tsconfig.json",
+  "compilerOptions": {
+    "declaration": true,
+    "noFallthroughCasesInSwitch": true,
+    "outDir": "./dist",
+	"strictPropertyInitialization": false,
+    "typeRoots": ["./node_modules/@types"],
+    "types": ["node"]
+  },
+  "exclude": ["node_modules", "cdk.out", "dist"]
+}
