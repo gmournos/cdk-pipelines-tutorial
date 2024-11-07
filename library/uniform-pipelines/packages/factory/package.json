@@ -1,6 +1,6 @@
 {
   "name": "@uniform-pipelines/factory",
-  "version": "1.0.6",
+  "version": "1.1.0",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "scripts": {
@@ -8,7 +8,7 @@
   },
   "dependencies": {
     "@types/js-yaml": "^4.0.9",
-    "@uniform-pipelines/model": "^1.0.0",
+    "@uniform-pipelines/model": "^1.0.1",
     "aws-cdk": "^2.165.0",
     "aws-cdk-lib": "^2.165.0",
     "js-yaml": "^4.1.0"

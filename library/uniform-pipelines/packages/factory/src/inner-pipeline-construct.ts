@@ -55,7 +55,7 @@ export class InnerPipelineConstruct<P extends ContainedStackPropsType = StackPro
     protected readonly codeSource: CodePipelineSource;
     readonly stagesWithtransitionsToDisable: string[] = []; 
 
-    public createDeploymentStage(targetAccount: string, requiresApproval: boolean, shouldSmokeTest: boolean, pipelineStackProps: InnerPipelineConstructProps<P>) {
+    public createDeploymentStage(targetAccount: string, requiresApproval: boolean, shouldSmokeTest: boolean, pipelineStackProps: InnerPipelineConstructProps<P>, targetRegion?: string) {
 
         class DeploymentStage extends Stage {
             readonly containedStack: Stack;
@@ -69,7 +69,7 @@ export class InnerPipelineConstruct<P extends ContainedStackPropsType = StackPro
                     stackName: pipelineStackProps.containedStackName,
                     env: { 
                         account: targetAccount,
-                        region: this.region,
+                        region: targetRegion ?? this.region,
                     },
                     environmentName: getReadableAccountName(targetAccount),
                 } as P);

@@ -2,7 +2,7 @@
 import { StackProps } from "aws-cdk-lib";
 import * as cdk from 'aws-cdk-lib';
 import { Accounts, CHANGESET_RENAME_MACRO, DEPLOYER_STACK_NAME_TAG, 
-    ROLE_REASSIGN_MACRO, STACK_NAME_TAG, STACK_VERSION_TAG } from "@uniform-pipelines/model";
+    ROLE_REASSIGN_MACRO, STACK_NAME_TAG, STACK_VERSION_TAG, TargetRegions } from "@uniform-pipelines/model";
 import { ContainedStackPropsType, InnerPipelineConstruct, InnerPipelineConstructProps } from "./inner-pipeline-construct";
 import { CfnPipeline } from "aws-cdk-lib/aws-codepipeline";
 import { Construct } from "constructs";
@@ -17,13 +17,13 @@ export class InnerPipelineStack<P extends ContainedStackPropsType = StackProps> 
         const innerPipelineConstruct = new InnerPipelineConstruct(this, 'inner-pipeline-construct', props);
 
         // Add a deployment stage to TEST
-        innerPipelineConstruct.createDeploymentStage(Accounts.TEST, false, true, props); 
+        innerPipelineConstruct.createDeploymentStage(Accounts.TEST, false, true, props, TargetRegions.TEST); 
 
         // Add a deployment stage to ACCEPTANCE
-        innerPipelineConstruct.createDeploymentStage(Accounts.ACCEPTANCE, true, false, props); 
+        innerPipelineConstruct.createDeploymentStage(Accounts.ACCEPTANCE, true, false, props, TargetRegions.ACCEPTANCE); 
 
         // Add a deployment stage to PRODUCTION
-        innerPipelineConstruct.createDeploymentStage(Accounts.PRODUCTION, true, false, props); 
+        innerPipelineConstruct.createDeploymentStage(Accounts.PRODUCTION, true, false, props, TargetRegions.PRODUCTION); 
 
         innerPipelineConstruct.pipeline.buildPipeline();
 

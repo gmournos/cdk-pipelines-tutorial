@@ -1,6 +1,6 @@
 import { StackProps } from "aws-cdk-lib";
 import * as cdk from 'aws-cdk-lib';
-import { INNER_PIPELINE_STACK_TEMPLATE_NAME, makeVersionedPipelineStackName } from "@uniform-pipelines/model";
+import { Accounts, INNER_PIPELINE_STACK_TEMPLATE_NAME, makeVersionedPipelineStackName, TargetRegions } from "@uniform-pipelines/model";
 import { InnerPipelineStack } from "./inner-pipeline-stack";
 import { ContainedStackClassConstructor, ContainedStackPropsType } from "./inner-pipeline-construct";
 
@@ -23,6 +23,10 @@ export class InnerPipelineStackFactory<P extends ContainedStackPropsType = Stack
             ...innerPipelineConstructProps,
             description: `Inner Delivery Pipeline for ${containedStackName}:${containedStackVersion}`,
             stackName: makeVersionedPipelineStackName(containedStackName, containedStackVersion),
+            env: {
+                account: Accounts.DEVOPS,
+                region: TargetRegions.DEVOPS,
+            }
         });
    }
 }

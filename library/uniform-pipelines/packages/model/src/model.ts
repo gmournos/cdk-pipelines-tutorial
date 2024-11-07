@@ -6,6 +6,14 @@ export const Accounts = {
     PRODUCTION: process.env.PRODUCTION_ACCOUNT || 'default-production-account',
 } as const; // immutable
 
+export enum TargetRegions { // modify according to your setup
+    DEVOPS = 'eu-west-1',
+    DEVELOPMENT = 'eu-west-1',
+    TEST = 'eu-west-1',
+    ACCEPTANCE = 'eu-west-1',
+    PRODUCTION = 'eu-west-1',
+}
+
 export const DOMAIN_NAME = 'cdk-pipelines-tutorial-artifact-domain';
 export const NPM_REPO = 'cdk-pipelines-tutorial-npm-repo';
 export const COMMON_REPO = 'cdk-pipelines-tutorial-common-repo';
