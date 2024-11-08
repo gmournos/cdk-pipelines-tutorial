@@ -7,6 +7,7 @@ import { OuterLevelPipelineConstruct } from './outer-level-pipeline-construct';
 import { PipelinesRoleConstruct } from './pipeline-roles-constructs';
 import { PipelineMacrosConstruct } from './pipeline-macros-construct';
 import { PostmanReportsConstruct } from './postman-reports-construct';
+import { CleanupOldPipelinesConstruct } from './cleanup-old-pipelines-construct';
 
 export class DevopsInfrastructureStack extends cdk.Stack {
     constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -32,5 +33,6 @@ export class DevopsInfrastructureStack extends cdk.Stack {
         new PostmanReportsConstruct(this, 'postman-reports', {
             artifactBucket: artifactBucketConstruct.artifactBucket
         });
+        new CleanupOldPipelinesConstruct(this, 'cleanup-old-pipelines');
     }
 }
