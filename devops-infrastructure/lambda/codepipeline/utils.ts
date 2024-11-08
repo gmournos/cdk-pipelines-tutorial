@@ -1,7 +1,10 @@
 import {
     CodePipelineClient,
+    GetPipelineExecutionCommand,
+    ListPipelineExecutionsCommand,
     ListPipelinesCommand,
     ListTagsForResourceCommand,
+    PipelineExecutionStatus,
     PipelineSummary,
     Tag
 } from '@aws-sdk/client-codepipeline';
@@ -70,3 +73,35 @@ export const filterTagsToMap = (tags: Tag[], tagNames: string[]): Map<string, st
 
     return tagMap;
 };
+
+export const getPipelineLastExecutionStatus = async (pipelineName: string): Promise<PipelineExecutionStatus> => {
+    try {
+        // Retrieve the most recent execution ID
+        const listExecutionsCommand = new ListPipelineExecutionsCommand({ pipelineName, maxResults: 1 });
+        const listResponse = await withThrottlingRetry(() => client.send(listExecutionsCommand));
+
+        const lastExecutionId = listResponse.pipelineExecutionSummaries?.[0]?.pipelineExecutionId;
+
+        if (!lastExecutionId) {
+            throw new Error(`No executions found for pipeline: ${pipelineName}`);
+        }
+
+        // Get the status of the last execution
+        const getExecutionCommand = new GetPipelineExecutionCommand({
+            pipelineName,
+            pipelineExecutionId: lastExecutionId,
+        });
+        const executionResponse = await withThrottlingRetry(() => client.send(getExecutionCommand));
+
+        const status = executionResponse.pipelineExecution?.status;
+
+        if (!status) {
+            throw new Error(`Could not retrieve the status for pipeline execution: ${lastExecutionId}`);
+        }
+
+        return status;
+    } catch (error) {
+        console.error(`Error getting last execution status for ${pipelineName}:`, error);
+        throw error;
+    }
+}
