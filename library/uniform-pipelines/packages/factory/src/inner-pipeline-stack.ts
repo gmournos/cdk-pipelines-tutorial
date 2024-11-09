@@ -17,11 +17,15 @@ export class InnerPipelineStack<P extends ContainedStackPropsType = StackProps> 
         const innerPipelineConstruct = new InnerPipelineConstruct(this, 'inner-pipeline-construct', props);
 
         // Add a deployment stage to TEST
-        innerPipelineConstruct.createDeploymentStage(Accounts.TEST, false, true, props, TargetRegions.TEST); 
+        innerPipelineConstruct.createDeploymentStage(Accounts.TEST, false, true, props, TargetRegions.TEST, new Map<string, string>([
+            ['retentionDays', '30'],
+        ])); 
 
         // Add a deployment stage to ACCEPTANCE
-        innerPipelineConstruct.createDeploymentStage(Accounts.ACCEPTANCE, true, false, props, TargetRegions.ACCEPTANCE); 
-
+        innerPipelineConstruct.createDeploymentStage(Accounts.ACCEPTANCE, true, false, props, TargetRegions.ACCEPTANCE, new Map<string, string>([
+            ['retentionDays', '90'],
+        ])); 
+ 
         // Add a deployment stage to PRODUCTION
         innerPipelineConstruct.createDeploymentStage(Accounts.PRODUCTION, true, false, props, TargetRegions.PRODUCTION); 
 
