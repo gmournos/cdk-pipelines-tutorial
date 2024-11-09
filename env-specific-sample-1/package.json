@@ -13,7 +13,7 @@
     "@tsconfig/node20": "^20.1.4",
     "@types/jest": "^29.5.14",
     "@types/node": "22.8.6",
-    "@uniform-pipelines/factory": "^1.1.0",
+    "@uniform-pipelines/factory": "^1.1.0-aspects",
     "aws-cdk": "2.165.0",
     "aws-cdk-lib": "2.165.0",
     "constructs": "^10.4.2",
