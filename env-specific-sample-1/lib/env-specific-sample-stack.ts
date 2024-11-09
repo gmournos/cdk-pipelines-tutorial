@@ -3,6 +3,8 @@ import { Bucket, CfnBucket } from 'aws-cdk-lib/aws-s3';
 import { BucketDeployment, Source } from 'aws-cdk-lib/aws-s3-deployment';
 import { Construct } from 'constructs';
 import * as path from 'path';
+import { HighLevelFunction } from './high-level-function';
+import { Code } from 'aws-cdk-lib/aws-lambda';
 
 export interface EnvSpecificSampleStackProps extends cdk.StackProps {
     environmentName: string;
@@ -24,6 +26,21 @@ export class EnvSpecificSampleStack extends cdk.Stack {
         new BucketDeployment(this, 'deploy-sample-file', {
             sources: [Source.asset(path.join('sample-files', props.environmentName))],
             destinationBucket: bucket,
+        });
+        
+        // 3. Create a Lambda function using HighLevelFunction
+        new HighLevelFunction(this, 'env-specific-aspect-sample-function', {
+            functionName: 'uniform-pipelines-env-specific-aspect-sample-function',
+            handler: "index.handler",
+            code: Code.fromInline(`
+                exports.handler = async function(event) {
+                    console.log("Event: ", JSON.stringify(event, null, 2));
+                    return {
+                        statusCode: 200,
+                        body: JSON.stringify({ message: "Hello from Lambda!" }),
+                    };
+                };
+            `)
         });
     }
 }
