@@ -55,7 +55,7 @@ export class InnerPipelineConstruct<P extends ContainedStackPropsType = StackPro
     protected readonly codeSource: CodePipelineSource;
     readonly stagesWithtransitionsToDisable: string[] = []; 
 
-    public createDeploymentStage(targetAccount: string, requiresApproval: boolean, shouldSmokeTest: boolean, pipelineStackProps: InnerPipelineConstructProps<P>, targetRegion?: string) {
+    public createDeploymentStage(targetAccount: string, requiresApproval: boolean, shouldSmokeTest: boolean, pipelineStackProps: InnerPipelineConstructProps<P>, targetRegion?: string, contextVars?: Map<string, string>) {
 
         class DeploymentStage extends Stage {
             readonly containedStack: Stack;
@@ -64,6 +64,11 @@ export class InnerPipelineConstruct<P extends ContainedStackPropsType = StackPro
                 super(scope, `${pipelineStackProps.containedStackName}-pipeline-deployment-${targetAccount}`, {
                     stageName: makeDeploymentStageName(targetAccount),
                 });
+                if (contextVars) {
+                    for (const [key, value] of contextVars.entries()) {
+                        this.node.setContext(key, value);
+                    }
+                }
                 this.containedStack = new pipelineStackProps.containedStackClass(this, 'artifacts-stack', {
                     ...pipelineStackProps.containedStackProps,
                     stackName: pipelineStackProps.containedStackName,
